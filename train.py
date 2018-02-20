@@ -22,6 +22,7 @@ from Detectors.Preprocessor import Preprocessor
 from Detectors.StructureAnalyzer import StructureAnalyzer
 from Detectors.EventDetector import EventDetector
 from Evaluators import EvaluateInteractionXML
+import copy
 
 def train(output, task=None, detector=None, inputFiles=None, models=None, parse=None,
           processUnmerging=None, processModifiers=None, 
@@ -67,7 +68,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
     useKerasDetector = False
-    if detector != None and detector.lower() == "keras":
+    if detector != None and "keras" in detector.lower():
         print >> sys.stderr, "Using a Keras Detector"
         useKerasDetector = True
         detector = None
@@ -374,6 +375,9 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
     if useKerasDetector:
         task, subTask = getSubTask(task)
         msg = "Keras example style"
+        overrideStyles = {x:(Parameters.get(exampleStyles[x]) if "override" in exampleStyles[x] else {}) for x in exampleStyles}
+        exampleStyles = {x:(exampleStyles[x] if not "override" in exampleStyles[x] else None) for x in exampleStyles}
+        print >> sys.stderr, "Override styles:", overrideStyles
         if "EventDetector" in detector:
             if task == ["EPI11"]:
                 exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20:epi_merge_negated", exampleStyles["trigger"])
@@ -394,6 +398,8 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=0:do=0.2:ol=50:skip_labels=CPR\:0,CPR\:1,CPR\:2,CPR\:7,CPR\:8,CPR\:10:mods=20", exampleStyles["examples"])
             else:
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["examples"])
+        for key in exampleStyles:
+            exampleStyles[key] = exampleStyles[key].union(overrideStyles[key])
         print >> sys.stderr, "Keras example styles:", exampleStyles
         
     return detector
