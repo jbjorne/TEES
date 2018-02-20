@@ -380,13 +380,14 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
         overrideStyles = {"all":{}}
         for key in exampleStyles:
             overrideStyles[key] = {}
-            if "override" in Parameters.get(exampleStyles[key]):
+            params = Parameters.get(exampleStyles[key])
+            if "override" in params:
                 exampleStyles[key] = None
-                overrideStyles[key] = Parameters.get(exampleStyles[key])
+                overrideStyles[key] = params
                 overrideStyles[key].pop("override")
-            elif "override_all" in Parameters.get(exampleStyles[key]):
+            elif "override_all" in params:
                 exampleStyles[key] = None
-                overrideStyles["all"] = Parameters.get(exampleStyles[key])
+                overrideStyles["all"] = params
                 overrideStyles["all"].pop("override_all")
             #exampleStyles[key] = exampleStyles[key] if (exampleStyles[key] != None and not "override" in exampleStyles[key]) else None
         print >> sys.stderr, "Override styles:", overrideStyles
