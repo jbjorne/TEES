@@ -402,7 +402,10 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
             exampleStyles["unmerging"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["unmerging"])
             exampleStyles["modifiers"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:el=41:mods=20", exampleStyles["modifiers"])
         elif "EntityDetector" in detector:
-            exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["examples"])
+            if task == "DDI13T91":
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20:names:build_for_nameless", exampleStyles["examples"])
+            else:
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["examples"])
         elif "EdgeDetector" in detector:
             if "DDI" in task:
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=0:do=0.2:dense=800:ol=50:mods=20", exampleStyles["examples"])
