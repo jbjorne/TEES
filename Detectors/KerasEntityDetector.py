@@ -1,5 +1,6 @@
 from ExampleWriters.EntityExampleWriter import EntityExampleWriter
 from Detectors.KerasTokenDetector import KerasTokenDetector
+import Utils.InteractionXML.ResolveEPITriggerTypes
 
 class KerasEntityDetector(KerasTokenDetector):
     def __init__(self):
@@ -13,14 +14,17 @@ class KerasEntityDetector(KerasTokenDetector):
         types = set()
         entityIds = set()
         for entity in entities:
-            eType = entity.get("type")
             if entity.get("given") == "True" and self.styles.get("all_tokens"):
                 continue
+            
+            eType = entity.get("type")
             if eType == "Entity" and self.styles.get("genia_task1"):
                 continue
+            elif self.styles.get("epi_merge_negated"):
+                types.add(Utils.InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(eType))
             else:
                 types.add(eType)
-                entityIds.add(entity.get("id"))
+            entityIds.add(entity.get("id"))
         if len(types) == 0 and useNeg:
             types.add("neg")
         return sorted(types), sorted(entityIds)

@@ -375,7 +375,10 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
         task, subTask = getSubTask(task)
         msg = "Keras example style"
         if "EventDetector" in detector:
-            exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["trigger"])
+            if task == ["EPI11"]:
+                exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20:epi_merge_negated", exampleStyles["trigger"])
+            else:
+                exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["trigger"])
             if task in ["GE09", "GE11", "GE13"] and subTask == 1:
                 exampleStyles["edge"] = Parameters.cat("keras:genia_task1:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["edge"])
             else:

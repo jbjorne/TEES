@@ -116,6 +116,8 @@ class KerasTokenDetector(KerasDetectorBase):
             extra.update(self.defaultExtra)
             if entityIds != None:
                 extra["goldIds"] = "/".join(entityIds) # The entities to which this example corresponds
+            if self.styles.get("epi_merge_negated"):
+                extra["unmergeneg"] = "epi" # Request trigger type unmerging
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra, "doc":sentenceGraph.documentElement.get("id")}) #, "extra":{"eIds":entityIds}}
             self.exampleIndex += 1
             self.exampleStats.endExample()

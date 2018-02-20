@@ -171,7 +171,7 @@ class KerasDetectorBase(Detector):
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         if not useExistingExamples:
-            examples = self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
+            examples = self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse)
             self.padExamples(model, examples)
         if len(examples["classification"]) > 0:
             self.showExample(examples["classification"][0])
@@ -296,13 +296,14 @@ class KerasDetectorBase(Detector):
     # Main Pipeline Steps
     ###########################################################################
     
-    def buildExamples(self, model, setNames, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
+    def buildExamples(self, model, setNames, datas, outputs, golds=[], saveIdsToModel=False, parse=None):
         """
         Runs the KerasExampleBuilder for the input XML files and saves the generated adjacency matrices
         into JSON files.
         """
-        if exampleStyle == None:
-            exampleStyle = model.getStr(self.tag+"example-style")
+        #if exampleStyle == None:
+        #    exampleStyle = model.getStr(self.tag+"example-style")
+        #self.styles = Utils.Parameters.get(exampleStyle, self.defaultStyles, allowNew=True)
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         self.skipLabels = []
@@ -319,6 +320,7 @@ class KerasDetectorBase(Detector):
             self.embeddings = self.loadEmbeddings(model.get(self.tag + "embeddings.json", False, None))
         # Make example for all input files
         examples = {x:[] for x in setNames}
+        print >> sys.stderr, "Building examples with styles:", self.styles
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName #, "to file", output
             if not isinstance(data, (list, tuple)): data = [data]
