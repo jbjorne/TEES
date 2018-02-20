@@ -376,9 +376,19 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
     if useKerasDetector:
         task, subTask = getSubTask(task)
         msg = "Keras example style"
-        overrideStyles = {x:(Parameters.get(exampleStyles[x]) if (exampleStyles[x] != None and "override" in exampleStyles[x]) else {"override":True}) for x in exampleStyles}
+        #overrideStyles = {x:(Parameters.get(exampleStyles[x]) if (exampleStyles[x] != None and "override" in exampleStyles[x]) else {"override":True}) for x in exampleStyles}
+        overrideStyles = {"all":{}}
         for key in exampleStyles:
-            exampleStyles[key] = exampleStyles[key] if (exampleStyles[key] != None and not "override" in exampleStyles[key]) else None
+            overrideStyles[key] = {}
+            if "override" in Parameters.get(exampleStyles[key]):
+                exampleStyles[key] = None
+                overrideStyles[key] = Parameters.get(exampleStyles[key])
+                overrideStyles[key].pop("override")
+            elif "override_all" in Parameters.get(exampleStyles[key]):
+                exampleStyles[key] = None
+                overrideStyles["all"] = Parameters.get(exampleStyles[key])
+                overrideStyles["all"].pop("override_all")
+            #exampleStyles[key] = exampleStyles[key] if (exampleStyles[key] != None and not "override" in exampleStyles[key]) else None
         print >> sys.stderr, "Override styles:", overrideStyles
         if "EventDetector" in detector:
             if task == ["EPI11"]:
@@ -404,8 +414,8 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
         for key in exampleStyles:
             if exampleStyles[key] != None:
                 exampleStyles[key] = Parameters.get(exampleStyles[key])
-                overrideStyles[key].pop("override")
                 exampleStyles[key].update(overrideStyles[key])
+                exampleStyles[key].update(overrideStyles["all"])
                 exampleStyles[key] = Parameters.toString(exampleStyles[key])
             print >> sys.stderr, "Keras final example style for " + key + ": ", exampleStyles[key]
         
