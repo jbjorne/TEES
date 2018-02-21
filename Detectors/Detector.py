@@ -188,7 +188,7 @@ class Detector():
                 parameters = model.getStr("BioNLPSTParams", defaultIfNotExist=None)
             else:
                 parameters = {}
-        elif parameters == "skip":
+        elif parameters == "skip" or "skip" in parameters:
             parameters = {"convert":False}
         return Parameters.get(parameters, ["convert", "evaluate", "scores", "a2Tag"])
     

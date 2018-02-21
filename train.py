@@ -487,8 +487,10 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores:a2Tag=rel", "BioNLP Shared Task / " + fullTaskId, ["default"])
         elif task in ("BB_EVENT_16", "BB_EVENT_16-FULL", "BB_EVENT_NER_16", "SDB16"):
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert=zip", "BioNLP Shared Task / " + fullTaskId, ["default"])
-        elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL", "DDI13"]:
+        elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL", "DDI13", "CP17", "SEMEVAL10T8"]:
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
+        else:
+            bioNLPSTParams = "skip"
         
         #######################################################################
         # Preprocessing parameters
