@@ -244,7 +244,7 @@ class KerasUnmergingDetector(KerasDetectorBase):
                     assert type(extra["class"]) in types.StringTypes, ",".join(labels)
                     assert type(extra["i"]) in types.StringTypes, argString
                     features = self.buildFeatures(sentenceGraph, paths, entity, argCombination, interactions, tokens, tokenMap, undirected, edgeCounts)
-                    examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
+                    examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra, "doc":sentenceGraph.documentElement.get("id")}) #, "extra":{"eIds":entityIds}}
                     self.exampleIndex += 1
                 else: # not a valid event or valid entity
                     if len(issues) == 0: # must be > 0 so that it gets filtered
