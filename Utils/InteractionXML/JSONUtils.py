@@ -36,8 +36,13 @@ class IJSONEncoder(json.JSONEncoder):
             simpleKeys = []
             complexKeys = []
             for key in o:
+                if key == "tag":
+                    simpleKeys = ["tag"] + simpleKeys
                 if key == "id":
-                    simpleKeys = ["id"] + simpleKeys
+                    if simpleKeys[0] == "tag":
+                        simpleKeys = ["tag", "id"] + simpleKeys[1:]
+                    else:
+                        simpleKeys = ["id"] + simpleKeys
                 elif not isinstance(o[key], (list, tuple, dict)):
                     simpleKeys.append(key)
                 elif isinstance(o[key], (list, tuple)) and "Offset" in key:
@@ -50,7 +55,7 @@ class IJSONEncoder(json.JSONEncoder):
             for key in simpleKeys:
                 output.append((self.current_indent_str if False else "") + json.dumps(key) + ": " + self.encode(o[key]))
             for key in complexKeys:
-                output.append("\n" + self.current_indent_str + json.dumps(key) + ": " + self.encode(o[key]))
+                output.append(json.dumps(key) + ": " + self.encode(o[key]))
             self.current_indent -= self.indent
             self.current_indent_str = "".join( [ " " for x in range(self.current_indent) ])
             return "{" + ", ".join(output) + "}"
@@ -69,20 +74,19 @@ def getAttributes(element):
 
 def convertXML(xml, outPath):
     xml = ETUtils.ETFromObj(xml)
-    corpusObj = {"name":None, "documents":[]}
+    corpusObj = {"name":None, "children":[]}
     root = xml.getroot()
     for document in root.getiterator("document"):
         docObj = getAttributes(document)
-        docObj["sentences"] = []
-        corpusObj["documents"].append(docObj)
+        docObj["children"] = []
+        corpusObj["children"].append(docObj)
         for sentence in document.getiterator("sentence"):
             sentObj = getAttributes(sentence)
-            docObj["sentences"].append(sentObj)
+            sentObj["children"] = []
+            docObj["children"].append(sentObj)
             for elType in ("entity", "interaction"):
                 for element in sentence.getiterator(elType):
-                    if not elType in sentObj:
-                        sentObj[elType] = []
-                    sentObj[elType].append(getAttributes(element))
+                    sentObj["children"].append(getAttributes(element))
     with open(outPath, "wt") as f:
         json.dump(corpusObj, f, indent=2, cls=IJSONEncoder)
     
