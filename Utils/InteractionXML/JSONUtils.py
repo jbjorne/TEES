@@ -43,12 +43,12 @@ class IJSONEncoder(json.JSONEncoder):
             self.current_indent += self.indent
             self.current_indent_str = "".join( [ " " for x in range(self.current_indent) ])
             for key in simpleKeys:
-                output.append(self.current_indent_str + json.dumps(key) + ": " + self.encode(o[key]))
+                output.append((self.current_indent_str if False else "") + json.dumps(key) + ": " + self.encode(o[key]))
             for key in complexKeys:
-                output.append(self.current_indent_str + json.dumps(key) + ": " + self.encode(o[key]))
+                output.append(self.current_indent_str + json.dumps(key) + ": " + self.encode(o[key]) + "\n")
             self.current_indent -= self.indent
             self.current_indent_str = "".join( [ " " for x in range(self.current_indent) ])
-            return "{\n" + ",\n".join(output) + "\n" + self.current_indent_str + "}"
+            return "{" + ", ".join(output) + "}"
         else:
             return json.dumps(o)
 
