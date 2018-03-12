@@ -5,6 +5,8 @@ import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 import json
 
+TAGKEY = "@"
+
 class IJSONEncoder(json.JSONEncoder):
     def __init__(self, *args, **kwargs):
         super(IJSONEncoder, self).__init__(*args, **kwargs)
@@ -36,11 +38,11 @@ class IJSONEncoder(json.JSONEncoder):
             simpleKeys = []
             complexKeys = []
             for key in o:
-                if key == "tag":
-                    simpleKeys = ["tag"] + simpleKeys
+                if key == TAGKEY:
+                    simpleKeys = [TAGKEY] + simpleKeys
                 if key == "id":
-                    if simpleKeys[0] == "tag":
-                        simpleKeys = ["tag", "id"] + simpleKeys[1:]
+                    if simpleKeys[0] == TAGKEY:
+                        simpleKeys = [TAGKEY, "id"] + simpleKeys[1:]
                     else:
                         simpleKeys = ["id"] + simpleKeys
                 elif not isinstance(o[key], (list, tuple, dict)):
@@ -53,9 +55,9 @@ class IJSONEncoder(json.JSONEncoder):
             self.current_indent += self.indent
             self.current_indent_str = "".join( [ " " for x in range(self.current_indent) ])
             for key in simpleKeys:
-                output.append((self.current_indent_str if False else "") + json.dumps(key) + ": " + self.encode(o[key]))
+                output.append((self.current_indent_str if False else "") + json.dumps(key) + ":" + self.encode(o[key]))
             for key in complexKeys:
-                output.append(json.dumps(key) + ": " + self.encode(o[key]))
+                output.append(json.dumps(key) + ":" + self.encode(o[key]))
             self.current_indent -= self.indent
             self.current_indent_str = "".join( [ " " for x in range(self.current_indent) ])
             return "{" + ", ".join(output) + "}"
@@ -64,7 +66,7 @@ class IJSONEncoder(json.JSONEncoder):
 
 def getAttributes(element):
     attrib = element.attrib.copy()
-    attrib["tag"] = element.tag
+    attrib[TAGKEY] = element.tag
     for key in attrib:
         if "offset" in key.lower():
             attrib[key] = Range.charOffsetToTuples(attrib[key])
