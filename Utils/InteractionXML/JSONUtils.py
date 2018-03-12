@@ -2,6 +2,7 @@ import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Range as Range
 import json
 
 class IJSONEncoder(json.JSONEncoder):
@@ -22,7 +23,7 @@ class IJSONEncoder(json.JSONEncoder):
             if primitives_only:
                 for item in o:
                     output.append(json.dumps(item))
-                return "[ " + ", ".join(output) + " ]"
+                return "[" + ", ".join(output) + "]"
             else:
                 self.current_indent += self.indent
                 self.current_indent_str = "".join( [ " " for x in range(self.current_indent) ])
@@ -35,7 +36,11 @@ class IJSONEncoder(json.JSONEncoder):
             simpleKeys = []
             complexKeys = []
             for key in o:
-                if not isinstance(o[key], (list, tuple, dict)):
+                if key == "id":
+                    simpleKeys = ["id"] + simpleKeys
+                elif not isinstance(o[key], (list, tuple, dict)):
+                    simpleKeys.append(key)
+                elif isinstance(o[key], (list, tuple)) and "Offset" in key:
                     simpleKeys.append(key)
                 else:
                     complexKeys.append(key)
@@ -45,24 +50,38 @@ class IJSONEncoder(json.JSONEncoder):
             for key in simpleKeys:
                 output.append((self.current_indent_str if False else "") + json.dumps(key) + ": " + self.encode(o[key]))
             for key in complexKeys:
-                output.append(self.current_indent_str + json.dumps(key) + ": " + self.encode(o[key]) + "\n")
+                output.append("\n" + self.current_indent_str + json.dumps(key) + ": " + self.encode(o[key]) + "\n")
             self.current_indent -= self.indent
             self.current_indent_str = "".join( [ " " for x in range(self.current_indent) ])
             return "{" + ", ".join(output) + "}"
         else:
             return json.dumps(o)
 
+def getAttributes(element):
+    attrib = element.attrib.copy()
+    for key in attrib:
+        if "offset" in key.lower():
+            attrib[key] = Range.charOffsetToTuples(attrib[key])
+            if len(attrib[key]) == 1:
+                attrib[key] = attrib[key][0]
+    return attrib
+
 def convertXML(xml, outPath):
     xml = ETUtils.ETFromObj(xml)
     corpusObj = {"name":None, "documents":[]}
     root = xml.getroot()
     for document in root.getiterator("document"):
-        docObj = {x:document.get(x) for x in document.attrib.keys()}
+        docObj = getAttributes(document)
         docObj["sentences"] = []
         corpusObj["documents"].append(docObj)
         for sentence in document.getiterator("sentence"):
-            sentObj = {x:sentence.get(x) for x in sentence.attrib.keys()}
+            sentObj = getAttributes(sentence)
             docObj["sentences"].append(sentObj)
+            for elType in ("entity", "interaction"):
+                for element in sentence.getiterator(elType):
+                    if not elType in sentObj:
+                        sentObj[elType] = []
+                    sentObj[elType].append(getAttributes(element))
     with open(outPath, "wt") as f:
         json.dump(corpusObj, f, indent=2, cls=IJSONEncoder)
     
