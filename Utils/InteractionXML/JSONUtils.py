@@ -59,6 +59,7 @@ class IJSONEncoder(json.JSONEncoder):
 
 def getAttributes(element):
     attrib = element.attrib.copy()
+    attrib["tag"] = element.tag
     for key in attrib:
         if "offset" in key.lower():
             attrib[key] = Range.charOffsetToTuples(attrib[key])
