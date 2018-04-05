@@ -297,9 +297,9 @@ class KerasUnmergingDetector(KerasDetectorBase):
             else:
                 relTokens.append(relMarker)
         
-        featureGroups = sorted(self.embeddings.keys())
-        wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
-        features = {x:[] for x in self.embeddings.keys()}
+        featureGroups = sorted(self.embeddingInputs.keys())
+        wordEmbeddings = [x for x in sorted(self.embeddings.keys()) if self.embeddings[x].wvPath != None]
+        features = {x:[] for x in featureGroups}
         for i in range(eventRange[0] - outsideLength, eventRange[1] + outsideLength + 1):
             if i >= 0 and i < numTokens:
                 token = tokens[i]
@@ -408,7 +408,8 @@ class KerasUnmergingDetector(KerasDetectorBase):
         self.defineEmbedding("int_arg")
         self.defineEmbedding("int_all")
         self.defineEmbedding("POS", vocabularyType="POS")
-        for i in range(self.pathDepth):
-            self.defineEmbedding("path" + str(i), vocabularyType="directed_dependencies")
+        #for i in range(self.pathDepth):
+        #    self.defineEmbedding("path" + str(i), vocabularyType="directed_dependencies")
+        self.defineEmbedding("path", vocabularyType="directed_dependencies", inputNames=["path" + str(i) for i in range(self.pathDepth)])
         #if self.debugGold:
         #    self.defineEmbedding("gold")

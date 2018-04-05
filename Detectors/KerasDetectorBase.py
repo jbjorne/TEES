@@ -376,8 +376,8 @@ class KerasDetectorBase(Detector):
          
         print >> sys.stderr, "Padding examples to length: " + str(self.exampleLength)
         counts = defaultdict(int)
-        embNames = sorted(self.embeddings.keys())
-        paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
+        embNames = sorted(self.embeddingInputs.keys())
+        paddings = {x:[self.embeddingInputs[x].getIndex("[pad]")] for x in embNames}
         for setName in sorted(exampleSets.keys()):
             examples = []
             for example in exampleSets[setName]:

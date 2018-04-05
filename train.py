@@ -71,7 +71,8 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     if detector != None and "keras" in detector.lower():
         print >> sys.stderr, "Using a Keras Detector"
         useKerasDetector = True
-        detector = None
+        if detector.lower() == "keras":
+            detector = None
     detector, bioNLPSTParams, preprocessorParams, folds = getTaskSettings(task, detector, 
         bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds, corpusDir=corpusDir, useKerasDetector=useKerasDetector)
     # Learn training settings from input files

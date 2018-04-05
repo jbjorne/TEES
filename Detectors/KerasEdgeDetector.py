@@ -292,8 +292,8 @@ class KerasEdgeDetector(KerasDetectorBase):
             else:
                 relTokens.append(relMarker)
         
-        featureGroups = sorted(self.embeddings.keys())
-        wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
+        featureGroups = sorted(self.embeddingInputs.keys())
+        wordEmbeddings = [x for x in sorted(self.embeddings.keys()) if self.embeddings[x].wvPath != None]
         features = {x:[] for x in featureGroups}
         maskMode = self.styles.get("ent_mask")
         for i in range(begin, rangeEnd):
@@ -364,11 +364,12 @@ class KerasEdgeDetector(KerasDetectorBase):
         if "head_score" in self.styles:
             self.defineEmbedding("head_score", vocabularyType="head_score")
         self.defineEmbedding("sp_mask")
-        self.defineEmbedding("sp_in", vocabularyType="directed_dependencies")
-        self.defineEmbedding("sp_out", vocabularyType="directed_dependencies")
-        for i in range(self.pathDepth):
-            for tag in ("path1_", "path2_"):
-                self.defineEmbedding(tag + str(i), vocabularyType="directed_dependencies")
+        #self.defineEmbedding("sp_in", vocabularyType="directed_dependencies")
+        #self.defineEmbedding("sp_out", vocabularyType="directed_dependencies")
+        #for i in range(self.pathDepth):
+        #    for tag in ("path1_", "path2_"):
+        #        self.defineEmbedding(tag + str(i), vocabularyType="directed_dependencies")
+        self.defineEmbedding("path", vocabularyType="directed_dependencies", inputNames=["path1_" + str(i) for i in range(self.pathDepth)] + ["path2_" + str(i) for i in range(self.pathDepth)] + ["sp_in", "sp_out"])
         if self.debugGold:
             self.defineEmbedding("gold")
 
