@@ -33,7 +33,7 @@ def evaluateXML(xml, goldPath=None, mode="interactions"):
     print >> sys.stderr, "Evaluating DDI13", mode
     xml = ETUtils.ETFromObj(xml)
     evaluatorDir = Settings.EVALUATOR["DDI13"]
-    evaluatorProgram = "evaluateDDI.jar" if mode == "interactions" else "evaluteNER.jar"
+    evaluatorProgram = "evaluateDDI.jar" if mode == "interactions" else "evaluateNER.jar"
     assert mode in ("interactions", "entities")
     tempDir = tempfile.mkdtemp()
     if goldPath == None:
