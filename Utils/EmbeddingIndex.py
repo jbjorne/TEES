@@ -112,17 +112,21 @@ class EmbeddingIndex():
         else:
             raise Exception("Unknown vocabulary type '" + str(self.vocabularyType) + "'")
     
-    def makeLayers(self, dimExample, name, trainable="AUTO", verbose=True):
+    def makeLayers(self, dimExample, name, trainable="AUTO", verbose=True, skipInputs=None):
         if trainable == "AUTO":
             trainable = True if self.wvPath == None else False
-        self.inputLayers = [Input(shape=(dimExample,), name=x) for x in self.inputNames]
-        self.embeddingLayer = Embedding(len(self.embeddings), 
-                              self.embeddings[0].size, 
-                              weights=[self.getEmbeddingMatrix(self.name, verbose=verbose)], 
-                              input_length=dimExample,
-                              trainable=trainable,
-                              name=self.name + "_embeddings")
-        self.embeddingLayers = [self.embeddingLayer(x) for x in self.inputLayers]
+        skipInputs = skipInputs if skipInputs != None else []
+        self.inputLayers = [Input(shape=(dimExample,), name=x) for x in self.inputNames if x not in skipInputs]
+        if len(self.inputLayers) > 0:
+            embeddingLayer = Embedding(len(self.embeddings), 
+                                  self.embeddings[0].size, 
+                                  weights=[self.getEmbeddingMatrix(self.name, verbose=verbose)], 
+                                  input_length=dimExample,
+                                  trainable=trainable,
+                                  name=self.name + "_embeddings")
+            self.embeddingLayers = [embeddingLayer(x) for x in self.inputLayers]
+        else:
+            self.embeddingLayers = []
         #return self.inputLayer, self.embeddingLayer
     
     def getEmbeddingMatrix(self, name, verbose=True):

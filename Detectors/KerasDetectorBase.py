@@ -591,13 +591,15 @@ class KerasDetectorBase(Detector):
         
         # The Embeddings
         embNames = sorted(self.embeddings.keys())
-        skipEmbeddings = []
+        skipInputs = []
         maxPathDepth = self.getParameter("path", self.styles, self.pathDepth, parameters, 1)
-        skipEmbeddings += ["path" + str(i) for i in range(self.pathDepth) if i >= maxPathDepth]
-        includedEmbeddings = [x for x in embNames if x not in set(skipEmbeddings)]
-        for embName in includedEmbeddings:
-            self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO", verbose=verbose)
-        merged_features = merge(sum([self.embeddings[x].embeddingLayers for x in includedEmbeddings], []), mode='concat', name="merged_features")
+        skipInputs += ["path" + str(i) for i in range(self.pathDepth) if i >= maxPathDepth]
+        skipInputs += ["path1_" + str(i) for i in range(self.pathDepth) if i >= maxPathDepth]
+        skipInputs += ["path2_" + str(i) for i in range(self.pathDepth) if i >= maxPathDepth]
+        #includedEmbeddings = [x for x in embNames if x not in set(skipEmbeddings)]
+        for embName in embNames:
+            self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO", verbose=verbose, skipInputs=skipInputs)
+        merged_features = merge(sum([self.embeddings[x].embeddingLayers for x in embNames], []), mode='concat', name="merged_features")
         if dropout > 0.0:
             merged_features = Dropout(dropout)(merged_features)
         
@@ -637,7 +639,7 @@ class KerasDetectorBase(Detector):
         else:
             layer = Dense(dimLabels, activation='softmax')(layer)
         
-        kerasModel = Model(sum([self.embeddings[x].inputLayers for x in includedEmbeddings], []), layer)
+        kerasModel = Model(sum([self.embeddings[x].inputLayers for x in embNames], []), layer)
         
         learningRate = self.getParameter("lr", self.styles, 0.001, parameters, 1) #float(self.styles.get("lr", 0.001))
         optName = self.getParameter("opt", self.styles, "adam", parameters, 1) #self.styles.get("opt", "adam")
