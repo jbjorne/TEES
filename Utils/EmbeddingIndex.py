@@ -17,11 +17,12 @@ def getRandomVector(dim, nor=False):
     return vector
 
 class EmbeddingIndex():
-    def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO"):
-        self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys, vocabularyType)
+    def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO", inputNames=None):
+        self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys, vocabularyType, inputNames=inputNames)
     
-    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO", embeddingIndex=None, locked=None):
+    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO", inputNames=None, embeddingIndex=None, locked=None):
         self.name = name
+        self.inputNames = inputNames if inputNames != None else [name]
         self.embeddings = [] if embeddingIndex == None else None
         self.embeddingIndex = {} if embeddingIndex == None else embeddingIndex
         self.keyByIndex = {} if embeddingIndex == None else {embeddingIndex[x]:x for x in embeddingIndex.keys()}
@@ -50,13 +51,13 @@ class EmbeddingIndex():
         return len(self.embeddingIndex)
     
     def serialize(self):
-        serialized = {"name":self.name, "dimVector":self.dimVector, "index":self.embeddingIndex, "vocabularyType":self.vocabularyType, "locked":self.locked}
+        serialized = {"name":self.name, "inputNames":self.inputNames, "dimVector":self.dimVector, "index":self.embeddingIndex, "vocabularyType":self.vocabularyType, "locked":self.locked}
         if self.wvPath != None:
             serialized.update({"wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap})
         return serialized
     
     def deserialize(self, obj):
-        self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("vocabularyType"), obj.get("index"), obj.get("locked"))
+        self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("vocabularyType"), obj.get("inputNames"), obj.get("index"), obj.get("locked"))
         return self
     
     def releaseWV(self):
@@ -114,14 +115,15 @@ class EmbeddingIndex():
     def makeLayers(self, dimExample, name, trainable="AUTO", verbose=True):
         if trainable == "AUTO":
             trainable = True if self.wvPath == None else False
-        self.inputLayer = Input(shape=(dimExample,), name=name)
+        self.inputLayers = [Input(shape=(dimExample,), name=x) for x in self.inputNames]
         self.embeddingLayer = Embedding(len(self.embeddings), 
                               self.embeddings[0].size, 
-                              weights=[self.getEmbeddingMatrix(name, verbose=verbose)], 
+                              weights=[self.getEmbeddingMatrix(self.name, verbose=verbose)], 
                               input_length=dimExample,
                               trainable=trainable,
-                              name=name + "_embeddings")(self.inputLayer)
-        return self.inputLayer, self.embeddingLayer
+                              name=self.name + "_embeddings")
+        self.embeddingLayers = [self.embeddingLayer(x) for x in self.inputLayers]
+        #return self.inputLayer, self.embeddingLayer
     
     def getEmbeddingMatrix(self, name, verbose=True):
         if verbose:

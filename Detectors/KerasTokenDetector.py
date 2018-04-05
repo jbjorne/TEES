@@ -87,7 +87,7 @@ class KerasTokenDetector(KerasDetectorBase):
             featureGroups = sorted(self.embeddings.keys())
             wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
             #tokens = []
-            features = {x:[] for x in self.embeddings.keys()} #{"words":[], "positions":[], "named_entities":[], "POS":[], "gold":[]}
+            features = {x:[] for x in self.embeddingInputs.keys()} #{"words":[], "positions":[], "named_entities":[], "POS":[], "gold":[]}
             featureGroups = sorted(features.keys())
             side = (self.exampleLength - 1) / 2
             windowIndex = 0
@@ -134,7 +134,6 @@ class KerasTokenDetector(KerasDetectorBase):
         else:
             self.defineEmbedding("named_entities")
         self.defineEmbedding("POS", vocabularyType="POS")
-        for i in range(self.pathDepth):
-            self.defineEmbedding("path" + str(i), vocabularyType="directed_dependencies")
+        self.defineEmbedding("path", vocabularyType="directed_dependencies", inputNames=["path" + str(i) for i in range(self.pathDepth)])
         #if self.debugGold:
         #    self.defineEmbedding("gold")

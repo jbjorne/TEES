@@ -287,8 +287,8 @@ class KerasDetectorBase(Detector):
             line = [i]
             for group in featureGroups:
                 embeddingIndex = features[group][i]
-                if group in self.embeddings and showKeys:
-                    embeddingName = self.embeddings[group].getKey(embeddingIndex)
+                if group in self.embeddingInputs and showKeys:
+                    embeddingName = self.embeddingInputs[group].getKey(embeddingIndex)
                 line.append(embeddingName)
             print >> sys.stderr, line
     
@@ -318,6 +318,10 @@ class KerasDetectorBase(Detector):
         # Load embeddings
         if self.embeddings == None:
             self.embeddings = self.loadEmbeddings(model.get(self.tag + "embeddings.json", False, None))
+            self.embeddingInputs = {}
+            for name in self.embeddings.keys():
+                for inputName in self.embeddings[name].inputNames:
+                    self.embeddingInputs[inputName] = self.embeddings[name]
         # Make example for all input files
         examples = {x:[] for x in setNames}
         print >> sys.stderr, "Building examples with styles:", self.styles
@@ -438,16 +442,17 @@ class KerasDetectorBase(Detector):
     ###########################################################################
     
     def addIndex(self, group, features, index):
-        if group in self.embeddings:
+        if group in self.embeddingInputs:
             features[group].append(index)
     
     def addFeature(self, group, features, key, default=None):
-        if group in self.embeddings:
-            features[group].append(self.embeddings[group].getIndex(key, default))
+        if group in self.embeddingInputs:
+            features[group].append(self.embeddingInputs[group].getIndex(key, default))
     
     def initEmbeddings(self, datas, parse):
         print >> sys.stderr, "Initializing embeddings"
         self.embeddings = {}
+        self.embeddingInputs = {}
         self.skipGroups = self.styles.get("skip", None)
         if isinstance(self.skipGroups, basestring):
             self.skipGroups = self.skipGroups.split(",")
@@ -460,7 +465,7 @@ class KerasDetectorBase(Detector):
     def defineFeatureGroups(self):
         raise NotImplementedError
     
-    def defineEmbedding(self, name, dim="AUTO", wvPath=None, wvMem=None, wvMap=None, initVectors="AUTO", vocabularyType="AUTO"):
+    def defineEmbedding(self, name, dim="AUTO", wvPath=None, wvMem=None, wvMap=None, initVectors="AUTO", vocabularyType="AUTO", inputNames=None):
         assert name not in self.embeddings
         if self.limitGroups != None and name not in self.limitGroups:
             print >> sys.stderr, "Limits: skipping feature group", name, self.limitGroups
@@ -472,8 +477,10 @@ class KerasDetectorBase(Detector):
             initVectors = ["[out]", "[pad]"]
         if dim == "AUTO":
             dim = int(self.styles.get("de", 8)) if wvPath == None else None #8 #32
-        self.embeddings[name] = EmbeddingIndex(name, dim, wvPath, wvMem, wvMap, initVectors, vocabularyType)
-    
+        self.embeddings[name] = EmbeddingIndex(name, dim, wvPath, wvMem, wvMap, initVectors, vocabularyType, inputNames=inputNames)
+        for inputName in self.embeddings[name].inputNames:
+            self.embeddingInputs[inputName] = self.embeddings[name]
+        
     def defineWordEmbeddings(self, wordVectors=None, wv_mem=None, wv_map=None):
         if wordVectors == None:
             wordVectors = self.styles.get("wv", Settings.W2VFILE)
@@ -590,7 +597,7 @@ class KerasDetectorBase(Detector):
         includedEmbeddings = [x for x in embNames if x not in set(skipEmbeddings)]
         for embName in includedEmbeddings:
             self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO", verbose=verbose)
-        merged_features = merge([self.embeddings[x].embeddingLayer for x in includedEmbeddings], mode='concat', name="merged_features")
+        merged_features = merge(sum([self.embeddings[x].embeddingLayers for x in includedEmbeddings], []), mode='concat', name="merged_features")
         if dropout > 0.0:
             merged_features = Dropout(dropout)(merged_features)
         
@@ -630,7 +637,7 @@ class KerasDetectorBase(Detector):
         else:
             layer = Dense(dimLabels, activation='softmax')(layer)
         
-        kerasModel = Model([self.embeddings[x].inputLayer for x in includedEmbeddings], layer)
+        kerasModel = Model(sum([self.embeddings[x].inputLayers for x in includedEmbeddings], []), layer)
         
         learningRate = self.getParameter("lr", self.styles, 0.001, parameters, 1) #float(self.styles.get("lr", 0.001))
         optName = self.getParameter("opt", self.styles, "adam", parameters, 1) #self.styles.get("opt", "adam")
