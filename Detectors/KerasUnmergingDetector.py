@@ -313,7 +313,7 @@ class KerasUnmergingDetector(KerasDetectorBase):
                 self.addIndex("entities", features, token.get("entities"))
                 for wordEmbedding in wordEmbeddings:
                     self.addIndex(wordEmbedding, features, token[wordEmbedding])
-                self.addFeature("positions", features, str(i - eventIndex), "[out]")
+                self.addFeature("positions", features, self.getPositionName(i - eventIndex), "[out]")
                 self.addFeature("rel_token", features, relTokens[i])
                 #self.addIndex("named_entities", features, token["named_entities"])
                 self.addIndex("POS", features, token["POS"])
@@ -408,8 +408,10 @@ class KerasUnmergingDetector(KerasDetectorBase):
         self.defineEmbedding("int_arg")
         self.defineEmbedding("int_all")
         self.defineEmbedding("POS", vocabularyType="POS")
-        #for i in range(self.pathDepth):
-        #    self.defineEmbedding("path" + str(i), vocabularyType="directed_dependencies")
-        self.defineEmbedding("path", vocabularyType="directed_dependencies", inputNames=["path" + str(i) for i in range(self.pathDepth)])
+        ##for i in range(self.pathDepth):
+        ##    self.defineEmbedding("path" + str(i), vocabularyType="directed_dependencies")
+        #self.defineEmbedding("path", vocabularyType="directed_dependencies", inputNames=["path" + str(i) for i in range(self.pathDepth)])
+        for name in ["path" + str(i) for i in range(self.pathDepth)]:
+            self.defineEmbedding(name, vocabularyType="directed_dependencies")
         #if self.debugGold:
         #    self.defineEmbedding("gold")

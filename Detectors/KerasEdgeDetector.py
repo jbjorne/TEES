@@ -303,8 +303,8 @@ class KerasEdgeDetector(KerasDetectorBase):
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
                 for wordEmbedding in wordEmbeddings:
                     self.addIndex(wordEmbedding, features, self.getWord(tokenMap[token1], tokenMap[token2], token, maskMode, wordEmbedding))
-                self.addFeature("positions1", features, str(t1Index - i), "[out]")
-                self.addFeature("positions2", features, str(t2Index - i), "[out]")
+                self.addFeature("positions1", features, self.getPositionName(t1Index - i), "[out]")
+                self.addFeature("positions2", features, self.getPositionName(t2Index - i), "[out]")
                 self.addIndex("entities", features, token.get("entities"))
                 self.addFeature("rel_token", features, relTokens[i]) #"e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
                 self.addIndex("POS", features, token.get("POS"))
@@ -364,12 +364,14 @@ class KerasEdgeDetector(KerasDetectorBase):
         if "head_score" in self.styles:
             self.defineEmbedding("head_score", vocabularyType="head_score")
         self.defineEmbedding("sp_mask")
-        #self.defineEmbedding("sp_in", vocabularyType="directed_dependencies")
-        #self.defineEmbedding("sp_out", vocabularyType="directed_dependencies")
-        #for i in range(self.pathDepth):
-        #    for tag in ("path1_", "path2_"):
-        #        self.defineEmbedding(tag + str(i), vocabularyType="directed_dependencies")
-        self.defineEmbedding("path", vocabularyType="directed_dependencies", inputNames=["path1_" + str(i) for i in range(self.pathDepth)] + ["path2_" + str(i) for i in range(self.pathDepth)] + ["sp_in", "sp_out"])
+        ##self.defineEmbedding("sp_in", vocabularyType="directed_dependencies")
+        ##self.defineEmbedding("sp_out", vocabularyType="directed_dependencies")
+        ##for i in range(self.pathDepth):
+        ##    for tag in ("path1_", "path2_"):
+        ##        self.defineEmbedding(tag + str(i), vocabularyType="directed_dependencies")
+        #self.defineEmbedding("path", vocabularyType="directed_dependencies", inputNames=["path1_" + str(i) for i in range(self.pathDepth)] + ["path2_" + str(i) for i in range(self.pathDepth)] + ["sp_in", "sp_out"])
+        for name in ["sp_in", "sp_out"] + ["path1_" + str(i) for i in range(self.pathDepth)] + ["path2_" + str(i) for i in range(self.pathDepth)]:
+            self.defineEmbedding(name, vocabularyType="directed_dependencies")
         if self.debugGold:
             self.defineEmbedding("gold")
 
