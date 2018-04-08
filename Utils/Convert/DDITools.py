@@ -40,7 +40,9 @@ def evaluateXML(xml, goldPath=None, mode="interactions"):
         goldPath = Settings.EVALUATOR[("DDI13T92" if mode == "interactions" else "DDI13T91") + "_TEST-gold"]
     goldItems = [os.path.join(goldPath, x) for x in os.listdir(goldPath)]
     goldSubDirs = [x for x in goldItems if os.path.isdir(x)]
-    if len(goldSubDirs) != len(goldItems) and len(goldSubDirs) > 0:
+    goldFiles = [x for x in goldItems if not os.path.isdir(x)]
+    goldHiddenFiles = [x for x in goldFiles if os.path.basename(x).startswith(".")]
+    if len(goldSubDirs) > 0 and len(goldSubDirs) + len(goldHiddenFiles) != len(goldItems):
         print goldItems, goldSubDirs
         raise Exception("Gold directory " + goldPath + " contains both files and subdirectories")
     goldTempDir = os.path.join(tempDir, "gold")
