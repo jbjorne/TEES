@@ -442,13 +442,14 @@ class KerasDetectorBase(Detector):
     ###########################################################################
     
     def getPositionName(self, index):
-        absIndex = abs(index)
-        if absIndex <= 10:
-            return str(index)
-        elif absIndex <= 20:
-            return "10+" if index > 0 else "-10+"
-        else:
-            return "20+" if index > 0 else "-20+"
+        return str(index)
+#         absIndex = abs(index)
+#         if absIndex <= 10:
+#             return str(index)
+#         elif absIndex <= 20:
+#             return "10+" if index > 0 else "-10+"
+#         else:
+#             return "20+" if index > 0 else "-20+"
     
     def addIndex(self, group, features, index):
         if group in self.embeddingInputs:
