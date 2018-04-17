@@ -63,6 +63,7 @@ class KerasDetectorBase(Detector):
         self.cmode = None
         self.useSeparateGold = False
         self.defaultStyles = {}
+        self.embeddings = None
         #KerasUtils.setRandomSeed(0)
     
     ###########################################################################
@@ -95,12 +96,7 @@ class KerasDetectorBase(Detector):
             #print >> sys.stderr, self.distanceAnalyzer.toDict()
         self.styles = Utils.Parameters.get(exampleStyle, self.defaultStyles, allowNew=True)
         self.saveStr(self.tag+"example-style", Utils.Parameters.toString(self.styles), self.model)
-        self.pathDepth = self.styles.get("path", "3")
-        if isinstance(self.pathDepth, basestring):
-            self.pathDepth = int(self.pathDepth)
-        else:
-            self.pathDepth = max([int(x) for x in self.pathDepth])
-        print >> sys.stderr, "Path depth is", self.pathDepth
+        self.definePathDepth()
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
@@ -170,6 +166,7 @@ class KerasDetectorBase(Detector):
         self.cmode = self.getStr(self.tag+"classification-mode", model)
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
+        self.definePathDepth()
         if not useExistingExamples:
             examples = self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse)
             self.padExamples(model, examples)
@@ -209,9 +206,10 @@ class KerasDetectorBase(Detector):
     
         # Build examples
         self.exampleIndex = 0
+        self.elementCounts = None
         if type(input) in types.StringTypes:
             self.elementCounts = IXMLUtils.getElementCounts(input)
-            self.progress = ProgressCounter(self.elementCounts.get("sentences"), "Build examples")
+        self.progress = ProgressCounter(self.elementCounts.get("sentences") if self.elementCounts != None else None, "Build examples")
         
         removeIntersentenceInteractions = True
         if "keep_intersentence" in self.styles and self.styles["keep_intersentence"]:
@@ -273,6 +271,14 @@ class KerasDetectorBase(Detector):
                 keys = ["[unconnected]"] * self.pathDepth
         for i in range(self.pathDepth):
             self.addFeature(embName + str(i), features, keys[i], "[out]")
+    
+    def definePathDepth(self):
+        self.pathDepth = self.styles.get("path", "3")
+        if isinstance(self.pathDepth, basestring):
+            self.pathDepth = int(self.pathDepth)
+        else:
+            self.pathDepth = max([int(x) for x in self.pathDepth])
+        print >> sys.stderr, "Path depth is", self.pathDepth
     
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         raise NotImplementedError

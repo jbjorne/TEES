@@ -22,6 +22,17 @@ class KerasEventDetector(EventDetector):
             return True
         return False
     
+    def initKerasComponents(self):
+        if self.kerasComponents["trigger"]:
+            self.triggerDetector = KerasEntityDetector()
+        if self.kerasComponents["edge"]:
+            self.edgeDetector = KerasEdgeDetector()
+        if self.kerasComponents["unmerging"]:
+            self.unmergingDetector = KerasUnmergingDetector()
+        if self.kerasComponents["modifier"]:
+            self.modifierDetector = KerasModifierDetector()
+        print >> sys.stderr, "Keras components:", self.kerasComponents
+    
     def train(self, trainData=None, optData=None, 
               model=None, combinedModel=None,
               triggerExampleStyle=None, edgeExampleStyle=None, unmergingExampleStyle=None, modifierExampleStyle=None,
@@ -47,19 +58,11 @@ class KerasEventDetector(EventDetector):
         self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", 
                                            "SELF-TRAIN-EXAMPLES-FOR-UNMERGING", "UNMERGING-EXAMPLES", "BEGIN-UNMERGING-MODEL", "END-UNMERGING-MODEL", 
                                            "GRID", "BEGIN-COMBINED-MODEL-FULLGRID", "END-COMBINED-MODEL"], fromStep, toStep)
-        if self.hasKerasStyle(triggerExampleStyle):
-            self.triggerDetector = KerasEntityDetector()
-            self.kerasComponents["trigger"] = True
-        if self.hasKerasStyle(edgeExampleStyle):
-            self.edgeDetector = KerasEdgeDetector()
-            self.kerasComponents["edge"] = True
-        if self.hasKerasStyle(unmergingExampleStyle):
-            self.unmergingDetector = KerasUnmergingDetector()
-            self.kerasComponents["unmerging"] = True
-        if self.hasKerasStyle(modifierExampleStyle):
-            self.modifierDetector = KerasModifierDetector()
-            self.kerasComponents["modifier"] = True
-        print >> sys.stderr, "Keras components:", self.kerasComponents
+        self.kerasComponents["trigger"] = self.hasKerasStyle(triggerExampleStyle)
+        self.kerasComponents["edge"] = self.hasKerasStyle(edgeExampleStyle)
+        self.kerasComponents["unmerging"] = self.hasKerasStyle(unmergingExampleStyle)
+        self.kerasComponents["modifier"] = self.hasKerasStyle(modifierExampleStyle)
+        self.initKerasComponents()
         #if self.hasKerasStyle(modifierExampleStyle):
         #    self.edgeDetector = KerasEdgeDetector()
         self.triggerDetector.enterState(self.STATE_COMPONENT_TRAIN)
@@ -250,3 +253,15 @@ class KerasEventDetector(EventDetector):
         # Save grid model
         self.saveStr("recallAdjustParameter", str(1.0), self.model)
         self.saveStr("recallAdjustParameter", str(1.0), self.combinedModel, False)
+        
+    def classify(self, data, model, output, parse=None, task=None, goldData=None, fromStep=None, toStep=None, omitSteps=None, workDir=None):
+        modelObj = self.openModel(model, "r")
+        for component in sorted(self.kerasComponents.keys()):
+            if component == "trigger" and modelObj.getStr(component + "-example-style", None) == None:
+                style = modelObj.getStr("entity-example-style")
+            else:
+                style = modelObj.getStr(component + "-example-style")
+            self.kerasComponents[component] = self.hasKerasStyle(style)
+        modelObj.close()
+        self.initKerasComponents()
+        EventDetector.classify(self, data, model, output, parse=parse, task=task, goldData=goldData, fromStep=fromStep, toStep=toStep, omitSteps=omitSteps, workDir=workDir)
