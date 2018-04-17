@@ -35,7 +35,7 @@ class EmbeddingIndex():
         self.wvMem = wvMem
         self.wvMap = wvMap
         self.wv = None
-        if self.wvPath != None:
+        if self.wvPath != None and self.locked == None:
             print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", self.wvPath
             self.wv = WV.load(self.wvPath, wvMem, wvMap)
             assert dimVector == None or dimVector == self.wv.size
