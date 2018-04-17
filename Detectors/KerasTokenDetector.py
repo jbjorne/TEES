@@ -90,7 +90,7 @@ class KerasTokenDetector(KerasDetectorBase):
             features = {x:[] for x in self.embeddingInputs.keys()} #{"words":[], "positions":[], "named_entities":[], "POS":[], "gold":[]}
             featureGroups = sorted(features.keys())
             side = (self.exampleLength - 1) / 2
-            #windowIndex = 0
+            windowIndex = 0
             for j in range(i - side, i + side + 1):
                 if j >= 0 and j < numTokens:
                     token2 = tokens[j]
@@ -99,7 +99,8 @@ class KerasTokenDetector(KerasDetectorBase):
                     #    self.addFeature("gold", features, ",".join(labels[j]), "[out]")
                     for wordEmbedding in wordEmbeddings:
                         self.addIndex(wordEmbedding, features, token2[wordEmbedding])
-                    self.addFeature("positions", features, self.getPositionName(j - i), "[out]")
+                    #self.addFeature("positions", features, self.getPositionName(j - i), "[out]")
+                    self.addFeature("positions", features, str(windowIndex), "[out]")
                     if self.useNonGiven:
                         self.addIndex("entities", features, token2["entities"])
                     else:
@@ -110,7 +111,7 @@ class KerasTokenDetector(KerasDetectorBase):
                     #tokens.append(None)
                     for featureGroup in featureGroups:
                         self.addFeature(featureGroup, features, "[pad]")
-                #windowIndex += 1
+                windowIndex += 1
             
             extra = {"t":token.get("id"), "entity":entity.get("id") if entity != None else None}
             extra.update(self.defaultExtra)
