@@ -1,6 +1,9 @@
 import sys, os
 import shutil
 import json
+import zipfile
+import csv
+import tempfile
 
 def getExperimentDirs(rootDir, experimentPatterns):
     experiments = []
@@ -70,16 +73,38 @@ def process(inPath, outPath, parametersPath):
     print names
     collectLogs(names, outPath)
     collectPredictions(names, outPath)
-    collectModels(names, outPath)
+    collectModels(names, outPath, params["values"])
 
-def collectModels(names, outPath):
+def collectModels(names, outPath, values):
     print "Collecting models"
     subPath = os.path.join(outPath, "models")
     if not os.path.exists(subPath):
         os.makedirs(subPath)
+    valuesTempPath = tempfile.mktemp("tsv")
     for experiment in names:
         print "Copying", experiment
-        shutil.copytree(os.path.join(experiment, "model"), os.path.join(subPath, names[experiment]))
+        z = zipfile.ZipFile(os.path.join(subPath, names[experiment] + ".zip"), "w")
+        modelPath = os.path.join(experiment, "model")
+        for filename in os.listdir(modelPath):
+            fileIsUpdated = False
+            if filename == "TEES_MODEL_VALUES.tsv" and values != None:
+                for corpusKey in values:
+                    if corpusKey in experiment:
+                        lines = None
+                        with open(os.path.join(modelPath, filename)) as tsvfile:
+                            lines = [x for x in csv.reader(tsvfile, delimiter="\t")]
+                        for key in sorted(values[corpusKey].keys()):
+                            lines.append([key, values[corpusKey][key]])
+                        with open(valuesTempPath, "wb") as csv_file:
+                            writer = csv.writer(csv_file, delimiter='\t')
+                            for line in lines:
+                                writer.writerow(line)
+                        z.write(valuesTempPath, "TEES_MODEL_VALUES.tsv")
+                        fileIsUpdated = True
+                        break
+            if not fileIsUpdated:
+                z.write(os.path.join(modelPath, filename), filename)
+        z.close()
 
 def collectLogs(names, outPath):
     print "Collecting logs"
