@@ -74,6 +74,13 @@ def process(inPath, outPath, parametersPath):
     collectLogs(names, outPath)
     collectPredictions(names, outPath)
     collectModels(names, outPath, params["values"])
+    collectFiles(names, outPath, params.get("files", []))
+
+def collectFiles(files, outPath):
+    print "Collecting files"
+    for filePath in files:
+        print "Copying", filePath
+        shutil.copy2(filePath, os.path.join(outPath, os.path.basename(filePath)))
 
 def collectModels(names, outPath, values):
     print "Collecting models"
