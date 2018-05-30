@@ -77,13 +77,14 @@ def process(inPath, outPath, parametersPath):
 
 def collectModels(names, outPath, values):
     print "Collecting models"
-    subPath = os.path.join(outPath, "models")
-    if not os.path.exists(subPath):
-        os.makedirs(subPath)
+    #subPath = os.path.join(outPath, "models")
+    #if not os.path.exists(subPath):
+    #    os.makedirs(subPath)
+    subPath = outPath
     valuesTempPath = tempfile.mktemp("tsv")
     for experiment in names:
         print "Copying", experiment
-        z = zipfile.ZipFile(os.path.join(subPath, names[experiment] + ".zip"), "w")
+        z = zipfile.ZipFile(os.path.join(subPath, names[experiment] + ".zip"), "w", zipfile.ZIP_DEFLATED)
         modelPath = os.path.join(experiment, "model")
         for filename in os.listdir(modelPath):
             fileIsUpdated = False
@@ -108,17 +109,14 @@ def collectModels(names, outPath, values):
 
 def collectLogs(names, outPath):
     print "Collecting logs"
-    logsPath = os.path.join(outPath, "logs")
-    if not os.path.exists(logsPath):
-        os.makedirs(logsPath)
+    z = zipfile.ZipFile(os.path.join(outPath, "logs.zip"), "w", zipfile.ZIP_DEFLATED)
     for experiment in names:
-        shutil.copy2(os.path.join(experiment, "log.txt"), os.path.join(logsPath, names[experiment] + "-log.txt"))
-
+        z.write(os.path.join(experiment, "log.txt"), names[experiment] + "-log.txt")
+    z.close()
+    
 def collectPredictions(names, outPath):
     print "Collecting predictions"
-    subPath = os.path.join(outPath, "predictions")
-    if not os.path.exists(subPath):
-        os.makedirs(subPath)
+    z = zipfile.ZipFile(os.path.join(outPath, "predictions.zip"), "w", zipfile.ZIP_DEFLATED)
     for experiment in names:
         for subDir in ("classification-devel", "classification-test"):
             if not os.path.exists(os.path.join(experiment, subDir)):
@@ -126,8 +124,9 @@ def collectPredictions(names, outPath):
             for filename in ("devel-pred.xml.gz", "devel-events.tar.gz" "test-pred.xml.gz", "test-events.tar.gz"):
                 if not os.path.exists(os.path.join(experiment, subDir, filename)):
                     continue
-                shutil.copy2(os.path.join(experiment, subDir, filename), os.path.join(subPath, names[experiment] + "-" + filename))
-
+                z.write(os.path.join(experiment, subDir, filename), names[experiment] + "-" + filename)
+    z.close()
+    
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(description="Make TEES release files.")
