@@ -270,7 +270,7 @@ def addTextToSTDoc(doc, docElement):
             if doc.id == None:
                 doc.id = sentence.get("origId").rsplit(".", 1)[0]
 
-def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds=False):
+def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds=False, skipModifiers=False):
     containerElements = [docElement] + [x for x in docElement.getiterator("sentence")]
     for containerElement in containerElements:
         for entity in containerElement.findall("entity"):
@@ -310,10 +310,11 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
 #                sentenceOffset = sentenceOffsets[idStem]
 #                ann.charBegin += sentenceOffset[0]
 #                ann.charEnd += sentenceOffset[0]
-            if entity.get("speculation") == "True":
-                ann.speculation = True
-            if entity.get("negation") == "True":
-                ann.negation = True
+            if not skipModifiers:
+                if entity.get("speculation") == "True":
+                    ann.speculation = True
+                if entity.get("negation") == "True":
+                    ann.negation = True
             ann.extra = getExtraFromElement(entity) # add all scores and extra data
             if entity.get("given") == "True":
                 # Remember to use original id for names!
@@ -345,13 +346,13 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
                     #ann.negationScores = entity.get("modPred")
                     # Events with 0 interactions (such as some Process-type events) would not be formed when constructing events based on interactions
                     if entity.get("event") == "True":
-                        event = makeSTEvent(ann, entityElementMap[entity.get("id")])
+                        event = makeSTEvent(ann, entityElementMap[entity.get("id")], skipModifiers=skipModifiers)
                         eMap[entity.get("id")] = event
                         doc.events.append(event)
                 else: # a duplicate trigger already exists
                     tMap[entity.get("id")] = duplicateAnn
 
-def makeSTEvent(triggerAnn, triggerElement):
+def makeSTEvent(triggerAnn, triggerElement, skipModifiers=False):
     """
     triggerAnn: A deduplicated st-format entity
     triggerElement: The original (possibly duplicate) interaction XML entity
@@ -367,10 +368,11 @@ def makeSTEvent(triggerAnn, triggerElement):
         triggerAnn.extra["conf"] = event.extra["conf"]
         del event.extra["conf"]
     # Mark modifiers
-    if triggerElement.get("speculation") == "True":
-        event.speculation = True
-    if triggerElement.get("negation") == "True":
-        event.negation = True
+    if not skipModifiers:
+        if triggerElement.get("speculation") == "True":
+            event.speculation = True
+        if triggerElement.get("negation") == "True":
+            event.negation = True
     if hasattr(event.trigger, "eventId"):
         event.id = event.trigger.eventId 
     return event
@@ -408,7 +410,7 @@ def addExtraToElement(element, extra, include=["conf", "umConf", "modConf", "spe
         else:
             element.set(extraTag + key, extra[key])
 
-def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipArgs=[], allAsRelations=False):
+def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipArgs=[], allAsRelations=False, skipModifiers=False):
     # First map Coref proteins
     corefProtMap = getCorefTargetMap(docElement)
     # Then process all interactions
@@ -438,7 +440,7 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
         else:
             e1 = interaction.get("e1")
             if e1 not in eMap: # event has not yet been created
-                eMap[e1] = makeSTEvent(tMap[e1], entityElementMap[e1])
+                eMap[e1] = makeSTEvent(tMap[e1], entityElementMap[e1], skipModifiers=skipModifiers)
                 doc.events.append(eMap[e1])
             # add arguments
             arg = eMap[e1].addArgument(interaction.get("type"), interaction.get("e2"), None, getExtraFromElement(interaction))
@@ -509,7 +511,7 @@ def mapSTArgumentTargets(stDoc, siteParents, siteOfTypes, tMap, eMap):
                     argsToKeep.append(arg1)
             event.arguments = argsToKeep            
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False, files=None, exportIds=None, clear=True):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False, files=None, exportIds=None, clear=True, skipModifiers=False):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -528,8 +530,8 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
         eMap = {}
         tMap = {}
         entityElementMap = {} # for task 3
-        addEntitiesToSTDoc(stDoc, document, tMap, eMap, entityElementMap, useOrigIds)
-        addInteractionsToSTDoc(stDoc, document, tMap, eMap, entityElementMap, skipArgs, allAsRelations)
+        addEntitiesToSTDoc(stDoc, document, tMap, eMap, entityElementMap, useOrigIds, skipModifiers=skipModifiers)
+        addInteractionsToSTDoc(stDoc, document, tMap, eMap, entityElementMap, skipArgs, allAsRelations, skipModifiers=skipModifiers)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output

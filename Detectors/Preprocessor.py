@@ -35,6 +35,7 @@ import Utils.Settings as Settings
 import Utils.Convert.convertBioNLP
 import Utils.Convert.convertPPI
 import Utils.Convert.convertChemProt
+import Evaluators.BioNLP11GeniaTools
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -100,6 +101,7 @@ class Preprocessor(ToolChain):
         self.defStep("EXPORT_CHEMPROT", Utils.Convert.convertChemProt.exportChemProtPredictions, {"fileTypes":"predictions", "setNames":{"train":"chemprot_training", "devel":"chemprot_development"}}, {"input":"xml", "output":"outPath"})
         self.defStep("MAKE_SETS", Utils.InteractionXML.MakeSets.processCorpus, {"sourceSet":None, "newSets":None, "seed":1}, {"input":"inPath", "output":"outPath"})
         self.defStep("DELETE_ELEMENTS", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":None, "reverse":False})
+        self.defStep("EVALUATE_BIONLP", Evaluators.BioNLP11GeniaTools.convertAndEvaluate, {"task":None, "a2Tag":"a2", "goldDir":None, "debug":False}, {"input":"xml"})
         self.defGroup("Saving")
         self.defStep("DIVIDE_SETS", self.divideSets, {"saveCombined":False})
         self.defStep("SAVE", self.save)

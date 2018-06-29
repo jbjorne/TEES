@@ -186,7 +186,7 @@ class Detector():
                 parameters = model.getStr("BioNLPSTParams", defaultIfNotExist=None)
             else:
                 parameters = {}
-        return Parameters.get(parameters, ["convert", "evaluate", "scores", "a2Tag"])
+        return Parameters.get(parameters, {"convert":None, "evaluate":None, "scores":None, "a2Tag":None, "evalSubTasks":"123"})
     
     def buildExamples(self, model, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
         if exampleStyle == None:

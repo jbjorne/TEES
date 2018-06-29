@@ -393,7 +393,16 @@ class EventDetector(Detector):
                     task = self.task
                     if task == None:
                         task = self.getStr(self.edgeDetector.tag+"task", self.model)
-                    self.stEvaluator.evaluate(output + "-events" + extension, task)
+                        modTask = self.getStr(self.modifierDetector.tag+"task", self.model)
+                        if modTask != None: # Earlier GE models have the task set as .2 even when they also contain modifier models
+                            task = task.replace(".2", ".3")
+                    if "evalSubTasks" in stParams and "." in task:
+                        task, subTask = task.split(".")
+                        subTask = int(subTask)
+                        evalSubTasks = "".join([x for x in stParams["evalSubTasks"] if int(x) <= subTask])
+                        task = task + "." + evalSubTasks
+                    #self.stEvaluator.evaluate(output + "-events" + extension, task)
+                    self.stEvaluator.convertAndEvaluate(xml, task, a2Tag=stParams["a2Tag"], debug=self.debug)
             else:
                 print >> sys.stderr, "No BioNLP shared task format conversion"
         finalXMLFile = self.getWorkFile(None, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])

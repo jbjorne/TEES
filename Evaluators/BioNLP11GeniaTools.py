@@ -6,6 +6,8 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(thisPath,".."))
 import Utils.Settings as Settings
 import Utils.Download as Download
+import Utils.STFormat
+import Utils.ElementTreeUtils as ETUtils
 
 # TODO: Move somewhere else
 #sys.path.append(os.path.abspath(os.path.join(thisPath, "../GeniaChallenge/evaluation")))
@@ -149,15 +151,54 @@ def getFScore(results, task):
             return -1
     return current
 
+def convertAndEvaluate(xml, task, a2Tag, goldDir=None, debug=False):
+    print >> sys.stderr, "Loading corpus", input
+    corpusTree = ETUtils.ETFromObj(xml)
+    print >> sys.stderr, "Corpus file loaded"
+    corpusRoot = corpusTree.getroot()
+    if task == None:
+        task = corpusRoot.get("source")
+    
+    print >> sys.stderr, "BioNLP Shared Task evaluation for task", task 
+    tempdir = tempfile.mkdtemp()
+    subTasks = None
+    if "." in task:
+        mainTask, subTasks = task.split(".")
+        subTasks = [int(x) for x in subTasks]
+    if subTasks != None:
+        for subTask in subTasks:
+            skipArgs = []
+            skipModifiers = False
+            if subTask == 1:
+                skipArgs=['AtLoc', 'ToLoc', 'Site']
+                skipModifiers = True
+            elif subTask == 2:
+                skipModifiers = True
+            print >> sys.stderr, "---------------", "Converting task", task, "corpus for GENIA sub task", subTask, "---------------"
+            print >> sys.stderr, "Skipping arguments:", skipArgs, " Skipping modifiers:", skipModifiers
+            outDir = os.path.join(tempdir, "events-" + str(subTask))
+            Utils.STFormat.ConvertXML.toSTFormat(corpusTree, outDir, outputTag=a2Tag, skipArgs=skipArgs, skipModifiers=skipModifiers)
+            evaluate(outDir, mainTask + "." + str(subTask), goldDir, debug)
+    else:
+        outDir = os.path.join(tempdir, "events")
+        print >> sys.stderr, "---------------", "Converting task", task, "corpus", "---------------"
+        Utils.STFormat.ConvertXML.toSTFormat(xml, outDir, outputTag=a2Tag)
+        evaluate(outDir, task, goldDir, debug)
+    shutil.rmtree(tempdir)
+    return xml
+
 def evaluate(source, task, goldDir=None, debug=False):
     print >> sys.stderr, "BioNLP task", task, "devel evaluation"
     # Determine task
-    subTask = "1"
+    subTasks = "1"
     if "." in task:
-        task, subTask = task.split(".")
+        task, subTasks = task.split(".")
+        subTasks = [int(x) for x in subTasks]
     # Do the evaluation
     if task in ["GE11", "GE09"]:
-        results = evaluateGE(source, task, int(subTask), goldDir=goldDir, debug=debug)
+        for subTask in subTasks:
+            print >> sys.stderr, "---------------", "Evaluating GENIA sub task", subTask, "---------------"
+            results = evaluateGE(source, task, int(subTask), goldDir=goldDir, debug=debug)
     elif task in ["EPI11", "ID11"]:
         results = evaluateEPIorID(task, source, goldDir)
     elif task == "REN11":
