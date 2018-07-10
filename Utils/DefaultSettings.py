@@ -279,3 +279,8 @@ URL["SE10T8_CORPUS"] = "https://drive.google.com/uc?export=download&id=0B_jQiLug
 
 W2VFILE = os.path.expanduser("~/Downloads/wikipedia-pubmed-and-PMC-w2v.bin")
 W2V = {}
+
+
+# Key definitions
+KEY_TYPE = {}
+KEY_TYPE["W2VFILE"] = {"type":"file", "md5":"ec5d68c1f372011c550eb9c2ff4e71b6"}
