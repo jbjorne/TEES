@@ -7,6 +7,7 @@ import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Settings as Settings
 import Utils.ElementTreeUtils as ETUtils
+from Detectors.Preprocessor import Preprocessor
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
@@ -113,6 +114,11 @@ class ChemProtEvaluator(Evaluator):
     def _runEvaluator(self, predFilePath, goldPath):
         tempDir = tempfile.mkdtemp()
         evaluatorDir = os.path.join(Settings.DATAPATH, "tools", "evaluators", "ChemProtEvaluator")
+        removeTemp = False
+        if tempDir == None:
+            tempDir = tempfile.mkdtemp()
+            removeTemp = True
+        print >> sys.stderr, "Using temporary evaluation directory", tempDir
         evaluatorTempDir = os.path.join(tempDir, "ChemProtEvaluator")
         shutil.copytree(evaluatorDir, evaluatorTempDir)
         currentDir = os.getcwd()
@@ -133,7 +139,9 @@ class ChemProtEvaluator(Evaluator):
                     value = float(value) if ("." in value or value == "NaN") else int(value)
                     assert key not in results
                     results[key] = value
-        shutil.rmtree(tempDir)
+        if removeTemp:
+            print >> sys.stderr, "Removing temporary evaluation directory", tempDir
+            shutil.rmtree(tempDir)
         return results
     
     def toStringConcise(self, indent="", title=None):
@@ -148,10 +156,21 @@ if __name__=="__main__":
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="", metavar="FILE")
     optparser.add_option("-p", "--predictions", default=None, dest="predictions", help="", metavar="FILE")
     optparser.add_option("-c", "--classSet", default=None, dest="classSet", help="", metavar="FILE")
+    optparser.add_option("-d", "--dataSet", default="devel", dest="dataSet", help="", metavar="FILE")
     (options, args) = optparser.parse_args()
     
+    assert options.dataSet in ("devel", "test")
+    options.dataSet = {"devel":"./data/chemprot_development_gold_standard.tsv", "test":"./data/chemprot_test_gold_standard.tsv"}[options.dataSet]
+    
+    if options.examples.endswith(".xml") or options.examples.endswith(".xml.gz"):
+        preprocessor = Preprocessor(steps="EXPORT_CHEMPROT")
+        tempDir = tempfile.mkdtemp()
+        tsvPath = os.path.join(tempDir, os.path.basename(options.examples) + ".tsv")
+        preprocessor.process(options.examples, tsvPath)
+        ChemProtEvaluator().evaluateTSV(tsvPath, options.dataSet)
+        shutil.rmtree(tempDir)
     if options.examples.endswith(".tsv"):
-        ChemProtEvaluator().evaluateTSV(options.examples)
+        ChemProtEvaluator().evaluateTSV(options.examples, options.dataSet)
     else:
         ev = ChemProtEvaluator(options.examples, options.predictions, options.classSet)
     #print ev.toStringConcise()

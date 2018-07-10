@@ -1,4 +1,7 @@
 import sys, os
+import tempfile
+import shutil
+import subprocess
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 try:
@@ -7,6 +10,7 @@ except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
+from Utils import Settings
 from collections import defaultdict
 
 #def loadEntities(filename):
@@ -24,6 +28,53 @@ from collections import defaultdict
 #        for ge in gold[id]:
 #            for ie in input[id]:
 #                Range.charOffsetToSingleTuple(charOffset, offsetSep)
+
+def evaluateXML(xml, goldPath=None, mode="interactions"):
+    print >> sys.stderr, "Evaluating DDI13", mode
+    xml = ETUtils.ETFromObj(xml)
+    evaluatorDir = Settings.EVALUATOR["DDI13"]
+    evaluatorProgram = "evaluateDDI.jar" if mode == "interactions" else "evaluateNER.jar"
+    assert mode in ("interactions", "entities")
+    tempDir = tempfile.mkdtemp()
+    if goldPath == None:
+        goldPath = Settings.EVALUATOR[("DDI13T92" if mode == "interactions" else "DDI13T91") + "_TEST-gold"]
+    goldItems = [os.path.join(goldPath, x) for x in os.listdir(goldPath)]
+    goldSubDirs = [x for x in goldItems if os.path.isdir(x)]
+    goldFiles = [x for x in goldItems if not os.path.isdir(x)]
+    goldHiddenFiles = [x for x in goldFiles if os.path.basename(x).startswith(".")]
+    if len(goldSubDirs) > 0 and len(goldSubDirs) + len(goldHiddenFiles) != len(goldItems):
+        print goldItems, goldSubDirs
+        raise Exception("Gold directory " + goldPath + " contains both files and subdirectories")
+    goldTempDir = os.path.join(tempDir, "gold")
+    os.makedirs(goldTempDir)
+    counts = defaultdict(int)
+    if len(goldSubDirs) > 0:
+        for goldSubDir in goldSubDirs:
+            for item in os.listdir(goldSubDir):
+                shutil.copy2(os.path.join(goldSubDir, os.path.basename(item)), os.path.join(goldTempDir, os.path.basename(item)))
+                counts[goldSubDir] += 1
+    else:
+        for item in goldItems:
+            shutil.copy2(os.path.join(goldPath, os.path.basename(item)), os.path.join(goldTempDir, os.path.basename(item)))
+            counts[goldPath] += 1
+    print >> sys.stderr, "Copied gold items to", goldTempDir, dict(counts)
+    evaluatorTempDir = os.path.join(tempDir, "evaluator")
+    os.makedirs(evaluatorTempDir)
+    shutil.copy2(os.path.join(evaluatorDir, evaluatorProgram), os.path.join(evaluatorTempDir, evaluatorProgram))
+    print >> sys.stderr, "Copied evaluator", evaluatorProgram, "to", evaluatorTempDir
+    subFile = os.path.join(tempDir, "submission.txt")
+    makeDDI13SubmissionFile(xml, subFile, mode)
+    command = "java -jar " + os.path.join(evaluatorTempDir, evaluatorProgram) + " '" + goldTempDir + "' " + subFile
+    print >> sys.stderr, command
+    #currentDir = os.getcwd()
+    #os.chdir(evaluatorDir)
+    p = subprocess.Popen(command, shell=True) #, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p.communicate(input='\n')
+    #for s in ["".join(x.readlines()).strip() for x in (p.stderr, p.stdout)]:
+    #    if s != "":
+    #        print >> sys.stderr, s
+    #os.chdir(currentDir)
+    #shutil.rmtree(tempDir)
 
 def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
     xml = ETUtils.ETFromObj(input)
@@ -67,6 +118,7 @@ def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
                         outFile.write("1|" + interaction.get("type") + "\n")
                     else:
                         outFile.write("0|null\n")
+    outFile.close()
 
 def makeDDISubmissionFile(input, output):
     xml = ETUtils.ETFromObj(input)
@@ -269,5 +321,7 @@ if __name__=="__main__":
         addMTMX(options.input, options.add, options.output)
     elif options.action == "ADD_TEST_GOLD":
         addTestGold(options.input, options.add, options.output)
+    elif options.action == "EVALUATE_DDI13":
+        evaluateXML(options.input, None, options.mode)
     else:
         assert False, options.action

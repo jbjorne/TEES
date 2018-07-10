@@ -73,6 +73,12 @@ def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaE
                 print "|", program[1], "|", program[0], "|", program[2], "|"
         print
 
+def hasTask(subdir, tasks):
+    for task in tasks:
+        if task in subdir:
+            return True
+    return False
+
 def extractModels(input, output, tasks, classificationOutput=None, preserveOutput=False):
     assert input != None
     assert output != None
@@ -83,20 +89,20 @@ def extractModels(input, output, tasks, classificationOutput=None, preserveOutpu
         os.makedirs(output)
     for subDir in os.listdir(input):
         subDirAbs = os.path.join(input, subDir)
-        if os.path.isdir(subDirAbs) and subDir.split(".")[0] in tasks:
+        if os.path.isdir(subDirAbs) and hasTask(subDir, tasks): #subDir.split(".")[0] in tasks:
             for suffix in ["devel", "test"]:
                 if os.path.exists(os.path.join(subDirAbs, "model-" + suffix)):
                     src = os.path.join(subDirAbs, "model-" + suffix)
-                    dst = os.path.join(output, subDir.split(".")[0] + "-" + suffix)
+                    dst = os.path.join(output, subDir + "-" + suffix) #subDir.split(".")[0] + "-" + suffix)
                     print >> sys.stderr, "Copying model", src, "to", dst
                     shutil.copytree(src, dst)
                 if os.path.exists(os.path.join(subDirAbs, "log.txt")):
                     print >> sys.stderr, "Copying training log for", subDir
-                    shutil.copy2(os.path.join(subDirAbs, "log.txt"), os.path.join(output, subDir.split(".")[0] + "-train-log.txt"))
+                    shutil.copy2(os.path.join(subDirAbs, "log.txt"), os.path.join(output, subDir + "-train-log.txt"))
                 if classificationOutput != None:
                     if os.path.exists(os.path.join(subDirAbs, "classification-" + suffix)):
                         src = os.path.join(subDirAbs, "classification-" + suffix + "/" + suffix + "-events.tar.gz")
-                        dst = os.path.join(classificationOutput, subDir.split(".")[0] + "-" + suffix + "-events.tar.gz")
+                        dst = os.path.join(classificationOutput, subDir + "-" + suffix + "-events.tar.gz")
                         print src
                         if os.path.exists(src):
                             print >> sys.stderr, "Copying classification", src, "to", dst
@@ -205,7 +211,7 @@ def getBioNLPSubmissionFiles(input, output, tasks, preserveOutput=False, include
         os.makedirs(output)
     for subDir in os.listdir(input):
         subDirAbs = os.path.join(input, subDir)
-        if os.path.isdir(subDirAbs) and subDir in tasks:
+        if os.path.isdir(subDirAbs) and hasTask(subDir, tasks):
             if os.path.exists(os.path.join(subDirAbs, "log.txt")):
                 print >> sys.stderr, "Copying training log for", subDir
                 shutil.copy2(os.path.join(subDirAbs, "log.txt"), os.path.join(output, subDir + "-train-log.txt"))
@@ -229,7 +235,7 @@ def getBioNLP13SubmissionFiles(input, output, tasks, preserveOutput=False, inclu
     questionnairePath = os.path.abspath(os.path.join(input, "questionnaire.txt"))
     for subDir in os.listdir(input):
         subDirAbs = os.path.join(input, subDir)
-        if os.path.isdir(subDirAbs) and subDir in tasks:
+        if os.path.isdir(subDirAbs) and hasTask(subDir, tasks):
             if os.path.exists(os.path.join(subDirAbs, "log.txt")):
                 print >> sys.stderr, "Copying training log for", subDir
                 shutil.copy2(os.path.join(subDirAbs, "log.txt"), os.path.join(output, subDir + "-train-log.txt"))

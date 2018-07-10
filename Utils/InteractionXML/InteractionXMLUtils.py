@@ -2,7 +2,9 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import os
+import sys, os
+import types
+import gzip
     
 ###############################################################################
 # XML Utilities
@@ -47,6 +49,26 @@ def setDefaultElement(parent, name):
         element = ET.Element(name)
         parent.append(element)
     return element
+
+def getElementCounts(filename, verbose=True):
+    if type(filename) in types.StringTypes:
+        return {}
+    if verbose:
+        print >> sys.stderr, "Counting elements:",
+    if filename.endswith(".gz"):
+        f = gzip.open(filename, "rt")
+    else:
+        f = open(filename, "rt")
+    counts = {"documents":0, "sentences":0}
+    for line in f:
+        if "<document" in line:
+            counts["documents"] += 1
+        elif "<sentence" in line:
+            counts["sentences"] += 1
+    f.close()
+    if verbose:
+        print >> sys.stderr, counts
+    return counts
 
 ###############################################################################
 # Identifiers

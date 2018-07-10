@@ -1,5 +1,6 @@
 import os
 import codecs
+import hashlib
 
 def openFile(path, tarFile=None):
     if tarFile != None:
@@ -28,3 +29,13 @@ def getTarFilePath(path):
         return tarFilePath, filePath
     else:
         return None, path
+
+# From https://stackoverflow.com/questions/1131220/get-md5-hash-of-big-files-in-python
+def getFileMd5(path, blocksize=2**20):
+    m = hashlib.md5()
+    with open(path, "rb") as f:
+        fileBuffer = f.read(blocksize)
+        while fileBuffer:
+            m.update(fileBuffer)
+            fileBuffer = f.read(blocksize)            
+    return m.hexdigest()

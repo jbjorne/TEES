@@ -15,6 +15,7 @@ import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import Utils.STFormat.ConvertXML
 import Utils.STFormat.Compare
 import Evaluators.BioNLP11GeniaTools
+from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class EventDetector(Detector):
     """
@@ -31,6 +32,7 @@ class EventDetector(Detector):
         #self.stWriteScores = False
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "event-"
+        self.evaluator = AveragingMultiClassEvaluator
     
     def setConnection(self, connection):
         self.triggerDetector.setConnection(connection)
@@ -55,7 +57,7 @@ class EventDetector(Detector):
               fullGrid=False, task=None,
               parse=None, tokenization=None,
               fromStep=None, toStep=None,
-              workDir=None):
+              workDir=None, testData=None):
         # Initialize the training process ##############################
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel,
                            triggerExampleStyle=triggerExampleStyle, edgeExampleStyle=edgeExampleStyle, 
@@ -352,7 +354,7 @@ class EventDetector(Detector):
             else:
                 EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, edgeParse)
         if self.checkStep("UNMERGING"):
-            if self.model.getStr("unmerging-classifier-parameter", None) != None: #self.model.hasMember("unmerging-classifier-model"):
+            if self.model.getStr("unmerging-classifier-parameter", None) != None or self.model.hasMember("unmerging-models.json"): #self.model.hasMember("unmerging-classifier-model"):
                 #xml = self.getWorkFile(xml, output + "-edge-pred.xml.gz")
                 # To avoid running out of memory, always use file on disk
                 xml = self.getWorkFile(None, workOutputTag + "edge-pred.xml.gz")
@@ -373,7 +375,7 @@ class EventDetector(Detector):
             else:
                 print >> sys.stderr, "No model for unmerging"
         if self.checkStep("MODIFIERS"):
-            if self.model.hasMember("modifier-classifier-model"):
+            if self.model.hasMember("modifier-classifier-model") or self.model.hasMember("modifier-models.json"):
                 xml = self.getWorkFile(xml, [workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
                 xml = self.modifierDetector.classifyToXML(xml, self.model, None, workOutputTag, goldData=goldData, parse=self.parse)
             else:

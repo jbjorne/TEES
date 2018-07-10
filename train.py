@@ -20,7 +20,9 @@ from Core.Model import Model
 from Detectors.StepSelector import StepSelector
 from Detectors.Preprocessor import Preprocessor
 from Detectors.StructureAnalyzer import StructureAnalyzer
-from Detectors.SingleStageDetector import SingleStageDetector
+from Detectors.EventDetector import EventDetector
+from Evaluators import EvaluateInteractionXML
+import copy
 
 def train(output, task=None, detector=None, inputFiles=None, models=None, parse=None,
           processUnmerging=None, processModifiers=None, 
@@ -65,10 +67,16 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     # Initialize working directory
     workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
+    useKerasDetector = False
+    if detector != None and "keras" in detector.lower():
+        print >> sys.stderr, "Using a Keras Detector"
+        useKerasDetector = True
+        if detector.lower() == "keras":
+            detector = None
     detector, bioNLPSTParams, preprocessorParams, folds = getTaskSettings(task, detector, 
-        bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds, corpusDir=corpusDir)
+        bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds, corpusDir=corpusDir, useKerasDetector=useKerasDetector)
     # Learn training settings from input files
-    detector = learnSettings(inputFiles, detector, classifierParams)   
+    detector = learnSettings(inputFiles, detector, classifierParams, task, exampleStyles, useKerasDetector=useKerasDetector)   
     # Get corpus subsets   
     getFolds(inputFiles, folds)
     getSubsets(inputFiles, subset)
@@ -115,17 +123,17 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------------ Train Detector ------------------"
         print >> sys.stderr, "----------------------------------------------------"
-        if isinstance(detector, SingleStageDetector):
+        if not isinstance(detector, EventDetector):
             detector.train(inputFiles["train"], inputFiles["devel"], models["devel"], models["test"],
                            exampleStyles["examples"], classifierParams["examples"], parse, None, task,
-                           fromStep=detectorSteps["TRAIN"], workDir="training")
+                           fromStep=detectorSteps["TRAIN"], workDir="training", testData=inputFiles["test"])
         else:
             detector.train(inputFiles["train"], inputFiles["devel"], models["devel"], models["test"],
                            exampleStyles["trigger"], exampleStyles["edge"], exampleStyles["unmerging"], exampleStyles["modifiers"],
                            classifierParams["trigger"], classifierParams["edge"], classifierParams["unmerging"], classifierParams["modifiers"],
                            classifierParams["recall"], processUnmerging, processModifiers, 
                            doFullGrid, task, parse, None,
-                           fromStep=detectorSteps["TRAIN"], workDir="training")
+                           fromStep=detectorSteps["TRAIN"], workDir="training", testData=inputFiles["test"])
         # Save the detector type
         for model in [models["devel"], models["test"]]:
             if model != None and os.path.exists(model):
@@ -151,7 +159,17 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         print >> sys.stderr, "------------ Empty devel classification ------------"
         print >> sys.stderr, "----------------------------------------------------"
         #detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
-        detector.classify(getEmptyCorpus(inputFiles["devel"], removeNames=("names" in str(exampleStyles["examples"]) or "names" in str(exampleStyles["trigger"])) ), models["devel"], "classification-empty/devel-empty", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
+        removalScope = "non-given"
+        if "names" in str(exampleStyles["examples"]) or "names" in str(exampleStyles["trigger"]):
+            removalScope = "all"
+        elif "Edge" in detector.__class__.__name__:
+            removalScope = "interactions"
+        detector.classify(getEmptyCorpus(inputFiles["devel"], scope=removalScope), models["devel"], "classification-empty/devel-empty", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
+        print >> sys.stderr, "*** Evaluate empty devel classification ***"
+        if os.path.exists("classification-empty/devel-empty-pred.xml.gz"):
+            EvaluateInteractionXML.run(detector.evaluator, "classification-empty/devel-empty-pred.xml.gz", inputFiles["devel"], parse)
+        else:
+            print >> sys.stderr, "No output file for evaluation"
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------- Test set classification --------------"
@@ -160,7 +178,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
             print >> sys.stderr, "Skipping, test file", inputFiles["test"], "does not exist"
         else:
             #detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
-            detector.classify(inputFiles["test"], models["test"], "classification-test/test", fromStep=detectorSteps["TEST"], workDir="classification-test")
+            detector.classify(inputFiles["test"], models["test"] if models["test"] != None else models["devel"], "classification-test/test", fromStep=detectorSteps["TEST"], workDir="classification-test")
             if detector.bioNLPSTParams["convert"]:
                 extension = ".zip" if (detector.bioNLPSTParams["convert"] == "zip") else ".tar.gz" 
                 Utils.STFormat.Compare.compare("classification-test/test-events" + extension, "classification-devel/devel-events" + extension, "a2")
@@ -171,6 +189,9 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
 def setDictDefaults(dictionary, defaults):
     if dictionary == None:
         return defaults.copy()
+    for key in dictionary:
+        if dictionary[key] == "None":
+            dictionary[key] = None
     for key in defaults:
         if key not in dictionary:
             dictionary[key] = defaults[key]
@@ -299,7 +320,7 @@ def workdir(path, deleteIfExists=True, copyFrom=None, log="log.txt"):
         print >> sys.stderr, "No logging"
     return path
 
-def learnSettings(inputFiles, detector, classifierParameters):
+def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyles, useKerasDetector=False):
     if detector == None:
         print >> sys.stderr, "*** Analyzing input files to determine training settings ***"
         structureAnalyzer = StructureAnalyzer()
@@ -323,6 +344,9 @@ def learnSettings(inputFiles, detector, classifierParameters):
             detector = "Detectors.EdgeDetector"
         else:
             assert False, structureAnalyzer.targets
+
+    if useKerasDetector and not "Keras" in detector:
+        detector = detector.replace("Detectors.", "Detectors.Keras")
     print >> sys.stderr, "Using detector '" + str(detector) + "'"
     
     # Set default parameters
@@ -343,7 +367,62 @@ def learnSettings(inputFiles, detector, classifierParameters):
         cp["examples"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", cp["examples"], "Classifier parameters for entities")
     elif detector == "Detectors.EdgeDetector":
         cp["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", cp["examples"], "Classifier parameters for edges")
-
+    elif detector == "Detectors.UnmergingDetector":
+        cp["examples"] = Parameters.cat("c=1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", cp["examples"], "Classifier parameters for unmerging")
+    
+    #######################################################################
+    # Keras example styles
+    #######################################################################
+    if useKerasDetector:
+        task, subTask = getSubTask(task)
+        msg = "Keras example style"
+        #overrideStyles = {x:(Parameters.get(exampleStyles[x]) if (exampleStyles[x] != None and "override" in exampleStyles[x]) else {"override":True}) for x in exampleStyles}
+        overrideStyles = {"all":{}}
+        for key in exampleStyles:
+            overrideStyles[key] = {}
+            params = Parameters.get(exampleStyles[key])
+            if "override" in params:
+                exampleStyles[key] = None
+                overrideStyles[key] = params
+                overrideStyles[key].pop("override")
+            elif "override_all" in params:
+                exampleStyles[key] = None
+                overrideStyles["all"] = params
+                overrideStyles["all"].pop("override_all")
+            #exampleStyles[key] = exampleStyles[key] if (exampleStyles[key] != None and not "override" in exampleStyles[key]) else None
+        print >> sys.stderr, "Override styles:", overrideStyles
+        if "EventDetector" in detector:
+            if task == "EPI11":
+                exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20:epi_merge_negated", exampleStyles["trigger"])
+            else:
+                exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["trigger"])
+            if task in ["GE09", "GE11", "GE13"] and subTask == 1:
+                exampleStyles["edge"] = Parameters.cat("keras:genia_task1:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["edge"])
+            else:
+                exampleStyles["edge"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["edge"])
+            exampleStyles["unmerging"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["unmerging"])
+            exampleStyles["modifiers"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:el=41:mods=20", exampleStyles["modifiers"])
+        elif "EntityDetector" in detector:
+            if task == "DDI13T91":
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20:names:build_for_nameless", exampleStyles["examples"])
+            else:
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["examples"])
+        elif "EdgeDetector" in detector:
+            if "DDI" in task:
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=0:do=0.2:dense=800:ol=50:mods=20", exampleStyles["examples"])
+            elif task == "CP17":
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=0:do=0.2:ol=50:skip_labels=CPR\:0,CPR\:1,CPR\:2,CPR\:7,CPR\:8,CPR\:10:mods=20", exampleStyles["examples"])
+            else:
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["examples"])
+        print >> sys.stderr, "Keras initial example styles:", exampleStyles
+        for key in exampleStyles:
+            if exampleStyles[key] != None:
+                exampleStyles[key] = Parameters.get(exampleStyles[key])
+                exampleStyles[key].update(overrideStyles[key])
+                exampleStyles[key].update(overrideStyles["all"])
+                exampleStyles[key] = Parameters.toString(exampleStyles[key])
+            print >> sys.stderr, "Keras final example style for " + key + ": ", exampleStyles[key]
+        
     return detector
 
 def getSubTask(task):
@@ -354,7 +433,7 @@ def getSubTask(task):
     return task, subTask
 
 def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams, 
-                    inputFiles, exampleStyles, classifierParameters, folds, corpusDir=None):
+                    inputFiles, exampleStyles, classifierParameters, folds, corpusDir=None, useKerasDetector=False):
     if task != None:
         print >> sys.stderr, "*** Defining training settings for task", task, "***"
         fullTaskId = task
@@ -363,7 +442,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             corpusDir = Settings.CORPUS_DIR
         print >> sys.stderr, "Loading corpus", task, "from", corpusDir
         for dataset in ["devel", "train", "test"]:
-            if inputFiles[dataset] == None and inputFiles[dataset] != "None":
+            if inputFiles[dataset] == None:
                 if task.startswith("DDI13") and task != "DDI13":
                     if dataset in ["devel", "train"]:
                         inputFiles[dataset] = os.path.join(corpusDir, "DDI13-train.xml")
@@ -378,7 +457,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                 else:
                     inputFiles[dataset] = os.path.join(corpusDir, task.replace("-FULL", "") + "-"+dataset+".xml")
                 
-            if inputFiles[dataset] == "None":
+            if inputFiles[dataset] == "skip":
                 inputFiles[dataset] = None
             if inputFiles[dataset] != None and not os.path.exists(inputFiles[dataset]):
                 fullPath = os.path.join(Settings.CORPUS_DIR, inputFiles[dataset])
@@ -389,15 +468,16 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                     print >> sys.stderr, "Input file", inputFiles[dataset], "for set '" + dataset + "' does not exist, skipping."
         assert inputFiles["train"] != None # at least training set must exist
         # Example generation parameters
-        if task == "CO11":
-            detector = "Detectors.CODetector"
-        elif task in ["BI11-FULL", "DDI11-FULL", "DDI13-FULL", "BB_EVENT_16-FULL"]:
-            detector = "Detectors.EventDetector"
-        elif task.startswith("DDI13"):
-            if task.endswith("T91"):
-                detector = "Detectors.EntityDetector"
-            elif task.endswith("T92") or task == "DDI13":
-                detector = "Detectors.EdgeDetector"
+        if detector == None:
+            if task == "CO11":
+                detector = "Detectors.CODetector"
+            elif task in ["BI11-FULL", "DDI11-FULL", "DDI13-FULL", "BB_EVENT_16-FULL"]:
+                detector = "Detectors.EventDetector"
+            elif task.startswith("DDI13"):
+                if task.endswith("T91"):
+                    detector = "Detectors.EntityDetector"
+                elif task.endswith("T92") or task == "DDI13":
+                    detector = "Detectors.EdgeDetector"
         
         #######################################################################
         # BioNLP Shared Task and preprocessing parameters
@@ -408,8 +488,10 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores:a2Tag=rel", "BioNLP Shared Task / " + fullTaskId, ["default"])
         elif task in ("BB_EVENT_16", "BB_EVENT_16-FULL", "BB_EVENT_NER_16", "SDB16"):
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert=zip", "BioNLP Shared Task / " + fullTaskId, ["default"])
-        elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL", "DDI13"]:
+        elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL", "DDI13", "CP17", "SEMEVAL10T8"]:
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
+        else:
+            bioNLPSTParams = "skip"
         
         #######################################################################
         # Preprocessing parameters
@@ -422,81 +504,85 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         #######################################################################
         # Example style parameters
         #######################################################################
-        # Example style parameters for single-stage tasks #####################
-        msg = "Single-stage example style / " + fullTaskId
-        if task == "REN11":
-            exampleStyles["examples"] = Parameters.cat("undirected:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], msg)
-        elif task == "DDI11":
-            exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
-        elif task.startswith("DDI13"):
-            if task.endswith("T91"):
-                exampleStyles["examples"] = Parameters.cat("names:build_for_nameless:ddi13_features:drugbank_features", exampleStyles["examples"], msg)
-            elif task.endswith("T92") or task == "DDI13":
-                exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
-        elif task == "BI11":
-            exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
-        elif task == "BB_EVENT_16":
-            exampleStyles["examples"] = Parameters.cat("keep_neg", exampleStyles["examples"], msg) #exampleStyles["examples"] = Parameters.cat("linear_features:keep_neg", exampleStyles["examples"], msg)
-        elif task == "SDB16":
-            exampleStyles["examples"] = Parameters.cat("sdb_merge:sdb_features", exampleStyles["examples"], msg)
-        # Edge style ##########################################################
-        msg = "Edge example style / " + fullTaskId
-        if task in ["GE09", "GE11", "GE13"] and subTask == 1:
-            exampleStyles["edge"] = Parameters.cat("genia_features:genia_task1", exampleStyles["edge"], msg)
-        elif task in ["GE09", "GE11", "GE13"]:
-            exampleStyles["edge"] = Parameters.cat("genia_features", exampleStyles["edge"], msg)
-        elif task == "REL11":
-            exampleStyles["edge"] = Parameters.cat("rel_features", exampleStyles["edge"], msg)
-        elif task == "DDI11-FULL":
-            exampleStyles["edge"] = Parameters.cat("drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
-        elif task == "DDI13-FULL":
-            exampleStyles["edge"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
-        elif task == "CO11":
-            exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], msg)
-        elif task == "BI11-FULL":
-            exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], msg)
-        # Trigger style #######################################################
-        msg = "Trigger example style / " + fullTaskId
-        if task in ["GE09", "GE11", "GE13"] and subTask == 1:
-            exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], msg)
-        elif task in ["EPI11", "PC13"]:
-            exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], msg)
-        elif task == "BB11": # "bb_features:build_for_nameless:wordnet"
-            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
-        elif task == "BB13T3": # "bb_features:build_for_nameless:wordnet"
-            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
-        elif task == "REL11":
-            exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], msg)
-        elif task in ["BI11-FULL", "DDI11-FULL"]:
-            exampleStyles["trigger"] = "names:build_for_nameless"
-        elif task == "DDI13-FULL":
-            exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
-        elif task == "BB_EVENT_16-FULL":
-            exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
-        elif task in "BB_EVENT_NER_16":
-            exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)
+        if not useKerasDetector:
+            # Example style parameters for single-stage tasks #####################
+            msg = "Single-stage example style / " + fullTaskId
+            if task == "REN11":
+                exampleStyles["examples"] = Parameters.cat("undirected:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], msg)
+            elif task == "DDI11":
+                exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
+            elif task.startswith("DDI13"):
+                if task.endswith("T91"):
+                    exampleStyles["examples"] = Parameters.cat("names:build_for_nameless:ddi13_features:drugbank_features", exampleStyles["examples"], msg)
+                elif task.endswith("T92") or task == "DDI13":
+                    exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
+            elif task == "BI11":
+                exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
+            elif task == "BB_EVENT_16":
+                exampleStyles["examples"] = Parameters.cat("keep_neg", exampleStyles["examples"], msg) #exampleStyles["examples"] = Parameters.cat("linear_features:keep_neg", exampleStyles["examples"], msg)
+            elif task == "SDB16":
+                exampleStyles["examples"] = Parameters.cat("sdb_merge:sdb_features", exampleStyles["examples"], msg)
+            # Edge style ##########################################################
+            msg = "Edge example style / " + fullTaskId
+            if task in ["GE09", "GE11", "GE13"] and subTask == 1:
+                exampleStyles["edge"] = Parameters.cat("genia_features:genia_task1", exampleStyles["edge"], msg)
+            elif task in ["GE09", "GE11", "GE13"]:
+                exampleStyles["edge"] = Parameters.cat("genia_features", exampleStyles["edge"], msg)
+            elif task == "REL11":
+                exampleStyles["edge"] = Parameters.cat("rel_features", exampleStyles["edge"], msg)
+            elif task == "DDI11-FULL":
+                exampleStyles["edge"] = Parameters.cat("drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
+            elif task == "DDI13-FULL":
+                exampleStyles["edge"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
+            elif task == "CO11":
+                exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], msg)
+            elif task == "BI11-FULL":
+                exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], msg)
+            # Trigger style #######################################################
+            msg = "Trigger example style / " + fullTaskId
+            if task in ["GE09", "GE11", "GE13"] and subTask == 1:
+                exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], msg)
+            elif task in ["EPI11", "PC13"]:
+                exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], msg)
+            elif task == "BB11": # "bb_features:build_for_nameless:wordnet"
+                exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
+            elif task == "BB13T3": # "bb_features:build_for_nameless:wordnet"
+                exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
+            elif task == "REL11":
+                exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], msg)
+            elif task in ["BI11-FULL", "DDI11-FULL"]:
+                exampleStyles["trigger"] = "names:build_for_nameless"
+            elif task == "DDI13-FULL":
+                exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
+            elif task == "BB_EVENT_16-FULL":
+                exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
+            elif task in "BB_EVENT_NER_16":
+                exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)            
+                
+            #######################################################################
+            # Classifier parameters
+            #######################################################################
+            if task == "DDI11":
+                classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
+            #elif task == "DDI13":
+            #    classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
+            elif task == "CO11":
+                classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
+                classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers / " + fullTaskId)
+                classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
+            elif task == "BB_EVENT_16":
+                classifierParameters["examples"] = Parameters.cat("c=10,20,30,40,50,60,70,80,100,110,115,120,125,130,140,150,200,500,1000,2000,3000,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
+            elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
+                classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
+            elif task == "SDB16":
+                classifierParameters["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["examples"], "Classifier parameters for single-stage examples / " + fullTaskId)
         
-        #######################################################################
-        # Classifier parameters
-        #######################################################################
-        if task == "DDI11":
-            classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
-        #elif task == "DDI13":
-        #    classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
-        elif task == "CO11":
-            classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
-            classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers / " + fullTaskId)
-            classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
-        elif task == "BB_EVENT_16":
-            classifierParameters["examples"] = Parameters.cat("c=10,20,30,40,50,60,70,80,100,110,115,120,125,130,140,150,200,500,1000,2000,3000,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
-        elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
-            classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
-        elif task == "SDB16":
-            classifierParameters["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["examples"], "Classifier parameters for single-stage examples / " + fullTaskId)
         # Training fold parameters ############################################
         if task.startswith("DDI13") and task != "DDI13":
-            folds["devel"]=["train1", "train2", "train3", "train4"]
-            folds["train"]=["train5", "train6", "train7", "train8", "train9"]
+            #folds["devel"]=["train1", "train2", "train3", "train4"]
+            #folds["train"]=["train5", "train6", "train7", "train8", "train9"]
+            folds["devel"]=["train1", "train2", "train3"]
+            folds["train"]=["train4", "train5", "train6", "train7", "train8", "train9"]
         
     return detector, bioNLPSTParams, preprocessorParams, folds
 
@@ -561,8 +647,8 @@ if __name__=="__main__":
     event = OptionGroup(optparser, "Event Detector Options (used when not using '--singleStage')", "")
     single = OptionGroup(optparser, "Single Stage Detector Options (used when using '--singleStage')", "")
     single.add_option("--exampleStyle", default=None, dest="exampleStyle", help="Single-stage detector example style")
-    event.add_option("-u", "--unmerging", default=None, action="callback", callback=getDefinedBoolOption, dest="unmerging", help="SVM unmerging")
-    event.add_option("-m", "--modifiers", default=None, action="callback", callback=getDefinedBoolOption, dest="modifiers", help="Train model for modifier detection")
+    event.add_option("-u", "--unmerging", default=None, action="callback", callback=getDefinedBoolOption, dest="unmerging", type="str", help="SVM unmerging")
+    event.add_option("-m", "--modifiers", default=None, action="callback", callback=getDefinedBoolOption, dest="modifiers", type="str", help="Train model for modifier detection")
     event.add_option("--triggerStyle", default=None, dest="triggerStyle", help="Event detector trigger example style")
     event.add_option("--edgeStyle", default=None, dest="edgeStyle", help="Event detector edge example style")
     event.add_option("--unmergingStyle", default=None, dest="unmergingStyle", help="Event detector unmerging example style")

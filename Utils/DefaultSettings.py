@@ -278,3 +278,9 @@ URL["DRUG_BANK_XML"] = "http://sourceforge.net/projects/tees/files/data/drugbank
 URL["SE10T8_CORPUS"] = "https://drive.google.com/uc?export=download&id=0B_jQiLugGTAkMDQ5ZjZiMTUtMzQ1Yy00YWNmLWJlZDYtOWY1ZDMwY2U4YjFk"
 
 W2VFILE = os.path.expanduser("~/Downloads/wikipedia-pubmed-and-PMC-w2v.bin")
+W2V = {}
+
+
+# Key definitions
+KEY_TYPE = {}
+KEY_TYPE["W2VFILE"] = {"type":"file", "md5":"ec5d68c1f372011c550eb9c2ff4e71b6"}

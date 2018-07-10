@@ -5,6 +5,7 @@ import sys, os
 import shutil
 import itertools
 import tempfile
+from Utils.DistanceAnalyzer import DistanceAnalyzer
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.Model import Model
 from StepSelector import StepSelector
@@ -26,6 +27,7 @@ class Detector():
     """
     def __init__(self):
         self.structureAnalyzer = StructureAnalyzer()
+        #self.distanceAnalyzer = DistanceAnalyzer()
         self.exampleBuilder = None
         self.exampleWriter = None
         self.Classifier = None
@@ -186,6 +188,8 @@ class Detector():
                 parameters = model.getStr("BioNLPSTParams", defaultIfNotExist=None)
             else:
                 parameters = {}
+        elif parameters == "skip" or "skip" in parameters:
+            parameters = {"convert":False}
         return Parameters.get(parameters, {"convert":None, "evaluate":None, "scores":None, "a2Tag":None, "evalSubTasks":"123"})
     
     def buildExamples(self, model, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):

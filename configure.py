@@ -7,6 +7,7 @@ Configure TEES by installing data files and external components.
 import sys, os, shutil
 import textwrap
 from Utils.Menu import *
+from Utils import FileUtils
 
 # Load TEES settings but ignore existing local settings
 temp_TEES_SETTINGS = None
@@ -401,6 +402,31 @@ def buildMenus():
 
     return "Configure TEES"
 
+def setKey(key, value):
+    if value == None:
+        print >> sys.stderr, "No value defined for key '" + str(key) + "'"
+        return
+    if key not in Settings.KEY_TYPE:
+        print >> sys.stderr, "Unknown key '" + str(key) + "'"
+        return
+    if Settings.KEY_TYPE[key].get("type") == "file":
+        fullPath = os.path.abspath(value)
+        if not os.path.exists(os.path.abspath(value)):
+            print >> sys.stderr, "No file at '" + fullPath + "'"
+            return
+        if not os.path.isfile(fullPath):
+            print >> sys.stderr, "'" + fullPath + "' is not a file"
+            return
+        expectedMD5 = Settings.KEY_TYPE[key].get("md5")
+        if Settings.KEY_TYPE[key].get("md5") != None:
+            print >> sys.stderr, "Determining MD5 for '" + fullPath + "'"
+            md5 = FileUtils.getFileMd5(fullPath)
+            if md5 != expectedMD5:
+                print >> sys.stderr, "MD5 '" + md5 + "' does not match expected value '" + expectedMD5 + "'"
+                return
+        #print >> sys.stderr, "Defining value '" + fullPath + "' for key '" + key + "'"
+        Settings.setLocal(key, value)
+
 def configure(installDir=None, localSettings=None, auto=False, width=80, clear=False, onError="ASK"):
     Menu.system.width = width
     Menu.system.progArgs = {}
@@ -414,7 +440,7 @@ def configure(installDir=None, localSettings=None, auto=False, width=80, clear=F
 if __name__=="__main__":
     import sys
     
-    from optparse import OptionParser
+    from optparse import OptionParser, OptionGroup
     # Import Psyco if available
     try:
         import psyco
@@ -424,20 +450,31 @@ if __name__=="__main__":
         pass
 
     optparser = OptionParser(usage="%prog [options]\nConfigure TEES")
+    group = OptionGroup(optparser, "Main Options", "")
     optparser.add_option("-i", "--installDir", default=None, dest="installDir", help="", metavar="FILE")
     optparser.add_option("-l", "--localSettings", default=None, dest="localSettings", help="", metavar="FILE")
     optparser.add_option("-w", "--width", default=80, type="int", dest="width", help="")
     optparser.add_option("--auto", default=False, action="store_true", dest="auto", help="")
     optparser.add_option("--clearInstallDir", default=False, action="store_true", dest="clearInstallDir", help="")
     optparser.add_option("--onError", default="ASK", dest="onError", help="ASK, IGNORE or EXIT")
+    group = OptionGroup(optparser, "Setting a Local Variable", "")
+    optparser.add_option("--key", default=None, help="The key to define in TEES local settings")
+    optparser.add_option("--value", default=None, help="The value for the key")
     (options, args) = optparser.parse_args()
     assert options.onError in ["ASK", "IGNORE", "EXIT"]
-
-    try:
-        configure(options.installDir, options.localSettings, options.auto, options.width, options.clearInstallDir, options.onError)
-    except KeyboardInterrupt:
-        # User interupted the program, exit gracefully
-        sys.exit(0)
+    
+    if options.key != None:
+        if options.localSettings != None:
+            os.environ["TEES_SETTINGS"] = options.localSettings
+        reload(Settings)
+        setKey(options.key, options.value)
+        
+    else:
+        try:
+            configure(options.installDir, options.localSettings, options.auto, options.width, options.clearInstallDir, options.onError)
+        except KeyboardInterrupt:
+            # User interupted the program, exit gracefully
+            sys.exit(0)
 #    Menu.system.width = options.width
 #    Menu.system.progArgs = {}
 #    Menu.system.progArgs["installDir"] = options.installDir

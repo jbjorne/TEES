@@ -29,6 +29,7 @@ import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
 import Utils.InteractionXML.MakeSets
 import Utils.InteractionXML.ValidateIXML
+import Utils.InteractionXML.Stratify
 #import Utils.InteractionXML.ExportParse
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
@@ -102,6 +103,7 @@ class Preprocessor(ToolChain):
         self.defStep("MAKE_SETS", Utils.InteractionXML.MakeSets.processCorpus, {"sourceSet":None, "newSets":None, "seed":1}, {"input":"inPath", "output":"outPath"})
         self.defStep("DELETE_ELEMENTS", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":None, "reverse":False})
         self.defStep("EVALUATE_BIONLP", Evaluators.BioNLP11GeniaTools.convertAndEvaluate, {"task":None, "a2Tag":"a2", "goldDir":None, "debug":False}, {"input":"xml"})
+        self.defStep("STRATIFY", Utils.InteractionXML.Stratify.stratify, {"oldSetMatch":None, "newSetCutoffs":False, "rounds":100000, "seed":1})
         self.defGroup("Saving")
         self.defStep("DIVIDE_SETS", self.divideSets, {"saveCombined":False})
         self.defStep("SAVE", self.save)
@@ -471,3 +473,4 @@ class Preprocessor(ToolChain):
 #             preprocessor.setIntermediateFiles(True)
 #         #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
 #         preprocessor.process(options.input, options.output, options.parameters, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
+
