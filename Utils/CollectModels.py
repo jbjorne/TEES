@@ -66,6 +66,7 @@ def process(inPath, outPath, parametersPath):
     if os.path.exists(outPath):
         shutil.rmtree(outPath)
     os.makedirs(outPath)
+    print "Loading parameters from", parametersPath
     with open(parametersPath, "rt") as f:
         params = json.load(f)
     experiments = getExperimentDirs(inPath, params["experimentPatterns"])
@@ -74,7 +75,7 @@ def process(inPath, outPath, parametersPath):
     collectLogs(names, outPath)
     collectPredictions(names, outPath)
     collectModels(names, outPath, params["values"])
-    collectFiles(names, outPath, params.get("files", []))
+    collectFiles(params.get("files", []), outPath)
 
 def collectFiles(files, outPath):
     print "Collecting files"
@@ -128,7 +129,7 @@ def collectPredictions(names, outPath):
         for subDir in ("classification-devel", "classification-test"):
             if not os.path.exists(os.path.join(experiment, subDir)):
                 continue
-            for filename in ("devel-pred.xml.gz", "devel-events.tar.gz" "test-pred.xml.gz", "test-events.tar.gz"):
+            for filename in ("devel-pred.xml.gz", "devel-events.tar.gz", "test-pred.xml.gz", "test-events.tar.gz"):
                 if not os.path.exists(os.path.join(experiment, subDir, filename)):
                     continue
                 z.write(os.path.join(experiment, subDir, filename), names[experiment] + "-" + filename)
