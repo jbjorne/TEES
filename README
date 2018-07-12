@@ -1,5 +1,5 @@
-Turku Event Extraction System 2.2.1
-===================================
+Turku Event Extraction System 2.3
+=================================
 
 Turku Event Extraction System (TEES) is a free and open source natural language
 processing system developed for the extraction of events and relations from 
@@ -14,6 +14,8 @@ their targets are included in this release.
     in all tasks)
  * DDI 2011 (Drug-drug interactions) Challenge (4th place, at 96% of the 
     performance of the best system)
+ * DDI 2013 (Drug-drug interactions) Challenge (2nd and 3rd place)
+ * BioNLP 2013 Shared Task (1st place in 4/8 tasks)
 
 For more information and documentation, see the TEES wiki at 
 https://github.com/jbjorne/TEES/wiki
@@ -74,3 +76,19 @@ https://github.com/jbjorne/TEES/wiki
 TEES also has a number of modules that can be used as standalone executables,
 including the wrappers for external tools such as parsers. A list of these
 executables can be found at https://github.com/jbjorne/TEES/wiki/Programs
+
+Citing
+======
+
+If you use TEES in a publication, please cite the following book:
+
+@phdthesis{bjorne2014biomedical,
+  title={Biomedical Event Extraction with Machine Learning},
+  author={Bj{\"o}rne, Jari},
+  year={2014},
+  school={University of Turku},
+  publisher={TUCS Dissertations}
+}
+
+TEES uses several external components, for more information on their licensing
+terms please see https://github.com/jbjorne/TEES/wiki/Licenses.
