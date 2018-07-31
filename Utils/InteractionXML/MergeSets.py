@@ -10,7 +10,10 @@ except ImportError:
 import Utils.ElementTreeUtils as ETUtils
 import re
 
-def getMatchingFiles(pattern, path):
+def getMatchingFiles(pattern, path=None):
+    if path == None:
+        path = os.path.dirname(pattern)
+        pattern = os.path.basename(pattern)
     pattern = re.compile(pattern)
     return sorted([x for x in os.listdir(path) if pattern.match(x)])
 

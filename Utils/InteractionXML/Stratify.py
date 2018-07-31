@@ -37,19 +37,34 @@ def getFractions(totals):
 def getDistance(fractionsA, fractionsB, allKeys):
     distances = []
     for key in allKeys:
-        distances.append(abs(fractionsA[key] - fractionsB[key]))
+        distances.append(abs(fractionsA.get(key, 0) - fractionsB.get(key, 0)))
     return sum(distances) / len(distances)
 
-def stratify(input, output, oldSetMatch, newSetCutoffs, rounds=100000, seed=1):
+def stratify(input, output, oldSetMatch=None, newSetCutoffs=None, rounds=100000, seed=1):
     print >> sys.stderr, "##### Stratify Sets #####"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
     
-    oldSetMatch = re.compile(oldSetMatch)
-    if isinstance(newSetCutoffs, basestring):
+    oldSetMatch = re.compile(oldSetMatch) if oldSetMatch != None else None
+    if newSetCutoffs == None:
+        oldSetCounts = {}
+        for document in corpusRoot.getiterator("document"):
+            if document.get("set") not in oldSetCounts:
+                oldSetCounts[document.get("set")] = 0
+            oldSetCounts[document.get("set")] += 1
+        total = float(sum(oldSetCounts.values()))
+        newSetCutoffs = {}
+        currentSum = 0
+        for setName in sorted(oldSetCounts.keys()):
+            currentSum += oldSetCounts[setName]
+            newSetCutoffs[setName] = currentSum / total
+    elif isinstance(newSetCutoffs, basestring):
         newSetCutoffs = eval(newSetCutoffs)
     newSetNames = sorted(newSetCutoffs.keys())
+    if len(newSetNames) == 1:
+        print >> sys.stderr, "Nothing to do, only one set defined:", newSetNames[0]
+        return corpusTree
     cutoffs = []
     for key in newSetNames:
         assert newSetCutoffs[key] >= 0.0 and newSetCutoffs[key] <= 1.0, (key, newSetCutoffs[key])
@@ -61,7 +76,7 @@ def stratify(input, output, oldSetMatch, newSetCutoffs, rounds=100000, seed=1):
     numDocs = 0
     for document in corpusRoot.getiterator("document"):
         numDocs += 1
-        if oldSetMatch.match(document.get("set")) != None:
+        if oldSetMatch == None or oldSetMatch.match(document.get("set")) != None:
             documents.append(document)
     print >> sys.stderr, "Matching documents", len(documents), "/", numDocs
     docCounts = {}

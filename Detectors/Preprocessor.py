@@ -103,7 +103,7 @@ class Preprocessor(ToolChain):
         self.defStep("MAKE_SETS", Utils.InteractionXML.MakeSets.processCorpus, {"sourceSet":None, "newSets":None, "seed":1}, {"input":"inPath", "output":"outPath"})
         self.defStep("DELETE_ELEMENTS", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":None, "reverse":False})
         self.defStep("EVALUATE_BIONLP", Evaluators.BioNLP11GeniaTools.convertAndEvaluate, {"task":None, "a2Tag":"a2", "goldDir":None, "debug":False}, {"input":"xml"})
-        self.defStep("STRATIFY", Utils.InteractionXML.Stratify.stratify, {"oldSetMatch":None, "newSetCutoffs":False, "rounds":100000, "seed":1})
+        self.defStep("STRATIFY", Utils.InteractionXML.Stratify.stratify, {"oldSetMatch":None, "newSetCutoffs":None, "rounds":100000, "seed":1})
         self.defGroup("Saving")
         self.defStep("DIVIDE_SETS", self.divideSets, {"saveCombined":False})
         self.defStep("SAVE", self.save)
@@ -258,6 +258,8 @@ class Preprocessor(ToolChain):
                 #setPaths = [fullPath + x for x in ("-train.xml", "-devel.xml", "-test.xml")]
                 pattern = input + ".+\.xml" #"|".join([input + x for x in ("-train.xml", "-devel.xml", "-test.xml")])
                 matching = Utils.InteractionXML.MergeSets.getMatchingFiles(pattern, Settings.CORPUS_DIR)
+                if len(matching) == 0:
+                    matching = Utils.InteractionXML.MergeSets.getMatchingFiles(pattern)
                 if len(matching) > 0: #any([os.path.exists(x) for x in setPaths]):
                     return Utils.InteractionXML.MergeSets.mergeSets(pattern)
                 else:
