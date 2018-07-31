@@ -50,6 +50,8 @@ def stratify(input, output, oldSetMatch=None, newSetCutoffs=None, rounds=100000,
     if newSetCutoffs == None:
         oldSetCounts = {}
         for document in corpusRoot.getiterator("document"):
+            if document.get("set") == None:
+                raise Exception("Document 'set' attribute not defined for document '" + str(document.get("id") + "'"))
             if document.get("set") not in oldSetCounts:
                 oldSetCounts[document.get("set")] = 0
             oldSetCounts[document.get("set")] += 1
