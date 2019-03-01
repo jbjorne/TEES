@@ -1,4 +1,5 @@
 import sys
+from Utils.InteractionXML.IDUtils import checkUnique
 
 def getCorpusIterator(input, output, parse=None, tokenization=None):
     import cElementTreeUtils as ETUtils
@@ -143,6 +144,11 @@ class SentenceElements:
                 else:
                     if verbose:
                         print >> sys.stderr, "Warning, tokenization", tokenization, "not found"
+        
+        ids = {}
+        for elements in (self.entities, self.interactions, self.tokens, self.dependencies):
+            for element in elements:
+                checkUnique(element, ids)
 
     def getEntity(self, offset, offsetList, entityIds):
         index = 0

@@ -69,3 +69,14 @@ def sortInteractionIds(id1, id2):
         elif number1 < number2:
            return -1
     return 0 # last number1 == number 2
+
+def checkUnique(element, ids):
+    tag = element.tag
+    id = element.get("id")
+    if id == None:
+        raise Exception("No identity defined for element of type " + str(tag))
+    if tag not in ids:
+        ids[tag] = set()
+    if id in ids[tag]:
+        raise Exception("Duplicate id '" + str(id) + "' for element of type " + str(tag))
+    ids[tag].add(id)

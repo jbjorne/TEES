@@ -4,6 +4,7 @@ import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Utils.ElementTreeUtils as ETUtils
+from Utils.InteractionXML.IDUtils import checkUnique
 
 def loadCorpus(filename, parse=None, tokenization=None, removeIntersentenceInteractions=True, removeNameInfo=False):
     try:
@@ -31,11 +32,14 @@ class CorpusElements:
         self.sentences = []
         self.documentSentences = []
         counts = {"sentences":0, "missing-tok":0, "missing-parse":0}
+        docIds = {}
         for documentElement in self.documents:
+            checkUnique(documentElement, docIds)
             self.documentsById[documentElement.attrib["id"]] = documentElement
             sentenceElements = documentElement.findall("sentence")
             self.documentSentences.append([])
             for sentenceElement in sentenceElements:
+                checkUnique(sentenceElement, docIds)
                 counts["sentences"] += 1
                 sentenceObj = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions)
                 self.sentencesById[sentenceElement.attrib["id"]] = sentenceObj
