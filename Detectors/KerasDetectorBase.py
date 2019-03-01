@@ -958,6 +958,6 @@ class KerasDetectorBase(Detector):
         if scores["micro"] != scores["micro-all"]:
             print >> sys.stderr, "all labels micro prfs = ", scores["micro-all"]
         print >> sys.stderr, "micro prfs = ", scores["micro"]
-        if scores["micro"][2] != 0.0:
+        if scores["micro"][2] != 0.0 and len(labelNames) > 1:
             print >> sys.stderr, classification_report(labels, predictions, target_names=labelNames)
         return scores
